@@ -3,7 +3,15 @@
 import argparse
 import zmq
 import time
+import os
+os.system('hostname -I')
+import psutil
 
+def get_cpu():
+    return psutil.cpu_percent()
+
+def get_vram():
+    return psutil.virtual_memory().percent
 
 def publisher(ip="0.0.0.0", port=5551):
     # ZMQ connection
@@ -18,10 +26,17 @@ def publisher(ip="0.0.0.0", port=5551):
 
     while True:
         topic = 'foo'.encode('ascii')
-        msg = 'test {}'.format(i).encode('ascii')
+        msg = f'test {i}'.encode('ascii')
+        
+        usage_topic = 'usage'.encode('ascii')
+
         # publish data
         socket.send_multipart([topic, msg])  # 'test'.format(i)
-        print("On topic {}, send data: {}".format(topic, msg))
+        socket.send_multipart([usage_topic, f'CPU - {get_cpu()}'.encode('ascii')])  # 'test'.format(i)
+        socket.send_multipart([usage_topic, f'VRAM - {get_vram()}'.encode('ascii')])  # 'test'.format(i)
+        print(f"On topic {topic}, send data: {msg}")
+        # print(f"On topic {usage_topic}, send data: {}")
+        # print(f"On topic {usage_topic}, send data: {f'{get_vram()}'.encode('ascii')}")
         time.sleep(.5)
 
         i += 1
@@ -40,4 +55,8 @@ if __name__ == "__main__":
     print("The following arguments are ignored: {}\n".format(leftovers))
 
     # call function and pass on command line arguments
-    publisher(**vars(args))
+    try:
+        publisher(**vars(args))
+    except KeyboardInterrupt:
+        print("Exiting publisher...")
+        pass

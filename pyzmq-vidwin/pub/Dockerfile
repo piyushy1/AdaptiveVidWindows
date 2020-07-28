@@ -5,7 +5,7 @@ MAINTAINER Piyush Yadav
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
-  gcc
+  gcc python3-dev
 
 WORKDIR /app
 COPY requirements.txt /app

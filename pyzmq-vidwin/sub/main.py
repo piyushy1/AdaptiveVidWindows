@@ -2,7 +2,8 @@
 
 import argparse
 import zmq
-
+import os
+os.system('hostname -I')
 
 def subscriber(ip="0.0.0.0", port=5551):
     # ZMQ connection
