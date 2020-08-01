@@ -6,6 +6,9 @@ import time
 import os
 os.system('hostname -I')
 import psutil
+import numpy as np
+import cv2
+from videostreamer import stream
 
 def get_cpu():
     return psutil.cpu_percent()
@@ -21,25 +24,30 @@ def publisher(ip="0.0.0.0", port=5551):
     socket = ctx.socket(zmq.PUB)
     socket.connect(url)  # publisher connects to subscriber
     print("Pub connected to: {}\nSending data...".format(url))
-
     i = 0
 
-    while True:
-        topic = 'foo'.encode('ascii')
-        msg = f'test {i}'.encode('ascii')
+    stream('midas.mp4', socket)
+
+    # socket.send_json(md, 0|zmq.SNDMORE)
+
+    # while True:
+    #     topic = 'foo'.encode('ascii')
+    #     msg = f'test {i}'.encode('ascii')
         
-        usage_topic = 'usage'.encode('ascii')
+    #     usage_topic = 'usage'.encode('ascii')
+    #     socket.send_multipart([topic, msg])  # 'test'.format(i)
+    #     time.sleep(.5)
+    #     i += 1
 
-        # publish data
-        socket.send_multipart([topic, msg])  # 'test'.format(i)
-        socket.send_multipart([usage_topic, f'CPU - {get_cpu()}'.encode('ascii')])  # 'test'.format(i)
-        socket.send_multipart([usage_topic, f'VRAM - {get_vram()}'.encode('ascii')])  # 'test'.format(i)
-        print(f"On topic {topic}, send data: {msg}")
-        # print(f"On topic {usage_topic}, send data: {}")
-        # print(f"On topic {usage_topic}, send data: {f'{get_vram()}'.encode('ascii')}")
-        time.sleep(.5)
 
-        i += 1
+
+    #     # publish data
+    #     socket.send_multipart([topic, msg*200])  # 'test'.format(i)
+    #     socket.send_multipart([usage_topic, f'CPU - {get_cpu()}'.encode('ascii')])  # 'test'.format(i)
+    #     socket.send_multipart([usage_topic, f'VRAM - {get_vram()}'.encode('ascii')])  # 'test'.format(i)
+    #     print(f"On topic {topic}, send data: {msg}")
+    #     # print(f"On topic {usage_topic}, send data: {}")
+    #     # print(f"On topic {usage_topic}, send data: {f'{get_vram()}'.encode('ascii')}")
 
 
 if __name__ == "__main__":
