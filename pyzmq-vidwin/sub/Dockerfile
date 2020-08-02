@@ -5,7 +5,7 @@ MAINTAINER Piyush
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
-  gcc
+  gcc iproute wondershaper
 
 WORKDIR /app
 COPY requirements.txt /app
