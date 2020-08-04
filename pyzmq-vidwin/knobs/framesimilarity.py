@@ -1,17 +1,22 @@
-from PIL import Image
 import datetime
-import imagehash
+
 import cv2
-from scipy.stats import wasserstein_distance
-from imagededup.methods import CNN
-from imagededup.utils.image_utils import load_image, preprocess_image
-import numpy
-import time
+import imagehash
 import matplotlib.pyplot as plt
+import numpy
+import numpy as np
+from PIL import Image
+from imagededup.methods import CNN
+from imagededup.utils.image_utils import load_image
+from scipy.stats import wasserstein_distance
+from sklearn.preprocessing import minmax_scale
+import time
 #from memory_profiler import profile
 
 
-time_list = []
+final_latency = []
+distance_list = []
+memory_list = []
 
 # tutorial to look for explanation https://fullstackml.com/wavelet-image-hash-in-python-3504fdd282b5
 
@@ -40,7 +45,7 @@ def average_hash_distance(img1, img2):
     delta = time2 - time1
     execution_time = int(delta.total_seconds() * 1000)
     print('Average hash_Normal_Distance: ', distance , execution_time)
-    return distance
+    return distance, execution_time
 
 
 def average_hash_distance1(img1, img2):
@@ -54,7 +59,7 @@ def average_hash_distance1(img1, img2):
     delta = time2 - time1
     execution_time = int(delta.total_seconds() * 1000)
     print('Average hash_Hamming_Distance: ',distance , execution_time)
-    return distance
+    return distance, execution_time
 
 def difference_hash_distance(img1, img2):
     time1 = datetime.datetime.now()
@@ -67,7 +72,7 @@ def difference_hash_distance(img1, img2):
     delta = time2 - time1
     execution_time = int(delta.total_seconds() * 1000)
     print('Difference hash_Normal_Distance: ',distance , execution_time)
-    return distance
+    return distance, execution_time
 
 def difference_hash_distance1(img1, img2):
     time1 = datetime.datetime.now()
@@ -102,6 +107,7 @@ def wavelet_hash_distance1(img1, img2):
     execution_time = int(delta.total_seconds() * 1000)
     print('Wavelet hash_Hamming_Distance: ', distance , execution_time)
 
+
 def perceptual_hash_distance(img1, img2):
     time1 = datetime.datetime.now()
     #hash1 = imagehash.phash(Image.open(img1))
@@ -113,7 +119,12 @@ def perceptual_hash_distance(img1, img2):
     time2 = datetime.datetime.now()
     delta = time2 - time1
     execution_time = int(delta.total_seconds() * 1000)
+    #elapsedSeconds = delta.seconds
+    #elapsedMicroSeconds = (elapsedSeconds * 1000000) + delta.microseconds
+    #execution_time = int(delta.microseconds)
     print('Perceptual hash_Normal_Distance: ',distance , execution_time)
+
+    #print ('%02d.%06d',execution_time)
     return distance, execution_time
 
 def perceptual_hash_distance1(img1, img2):
@@ -127,7 +138,7 @@ def perceptual_hash_distance1(img1, img2):
     delta = time2 - time1
     execution_time = int(delta.total_seconds() * 1000)
     print('Perceptual hash_Hamming_Distance: ', distance , execution_time)
-    return distance
+    return distance, execution_time
 
 ###################################################################################
 ################# HISTOGRAM BASED SIMILARITY METHODS ##############################
@@ -163,7 +174,7 @@ def Histogram_frame_distance(frame1, frame2):
     delta = time2 - time1
     execution_time = int(delta.total_seconds() * 1000)
     print('Histogram_Distance: ', dist_value , execution_time)
-    return dist_value
+    return dist_value, execution_time
 
 ###################################################################################
 ################# CNN BASED COSINE SIMILARITY METHODS ############################~
@@ -193,8 +204,10 @@ def CVtoPILformat(img):
     return im_pil
 
 # function to stream video to get frame distance of different similarity algo.
-def stream_video(video):
+def stream_video(video, algo):
+    latency_list = []
     video = cv2.VideoCapture(video)
+    total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     # video.set(cv2.CAP_PROP_FPS, int(5))
     print("Frame rate : {0}".format(video.get(cv2.CAP_PROP_FPS)))
 
@@ -205,33 +218,47 @@ def stream_video(video):
 
     while video.isOpened():
 
-        ret1, frame = video.read()
-        # for hash need to convert to PIL format
+        # there is some video release error so breaking loop before final frmae.
+        if i == total:
+            # get the latency for all similarity algo.
+            final_latency.append(np.array(latency_list))
 
-        frame = CVtoPILformat(frame)
-
-        if temp_block == []:
-            temp_block.append(frame)
-            counter.append(i)
+            break
 
         else:
-            # print(new_frame_data[0].shape)
+            ret1, frame = video.read()
+            # for hash need to convert to PIL format
 
-            # if len(counter) != 0:
-            print('Frame distance', counter[0], i)
+            if algo != Histogram_frame_distance:
+                frame = CVtoPILformat(frame)
 
-            # dist = difference_hash_distance(frame, temp_block[0])
-            dist, latency = wavelet_hash_distance(frame, temp_block[0])
-            #dist, latency = perceptual_hash_distance(frame, temp_block[0])
-            #dist = Histogram_frame_distance(frame, temp_block[0])
-            #dist = average_hash_distance(frame, temp_block[0])
-            time_list.append(latency)
-            if dist < 0.97:
-                print("New block found separate - len ", len(temp_block))
-                temp_block.clear()
-                counter.clear()
-            else:
+            if temp_block == []:
                 temp_block.append(frame)
+                counter.append(i)
+
+            else:
+                # print(new_frame_data[0].shape)
+
+                # if len(counter) != 0:
+                print('Frame distance', counter[0], i)
+
+                # dist = difference_hash_distance(frame, temp_block[0])
+                #dist, latency = wavelet_hash_distance(frame, temp_block[0])
+                #if algo == 'perceptual_hash_distance':
+                dist, latency = algo(frame, temp_block[0])
+                #dist, latency = Histogram_frame_distance(frame, temp_block[0])
+                #dist = average_hash_distance(frame, temp_block[0])
+                latency_list.append(latency)
+                distance_list.append(dist)
+                dist = np.std(minmax_scale(distance_list, feature_range=(0, 1), axis=0, copy=True))
+                print(dist)
+                if dist > 0.2:
+                    print("New block found separate - len ", len(temp_block))
+                    temp_block.clear()
+                    counter.clear()
+                    distance_list.clear()
+                else:
+                    temp_block.append(frame)
 
         i = i + 1
 
@@ -246,16 +273,16 @@ def stream_video(video):
     cv2.destroyAllWindows()
 
 
-def violinplot(data, x_pos):
-    # fake data
-    # pos = [1, 2, 4, 5, 7, 8]
-    # data = [np.random.normal(0, std, size=100) for std in pos]
+def violin_plot(data, label):
+
+    x_pos = [i for i in range(1,len(label)+1)]
+    #data1 = [np.random.normal(0, std, size=100) for std in x_pos]
     # print(data)
     # fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(10, 6))
     plt.violinplot(data, x_pos, points=20, widths=0.3,
                    showmeans=True, showextrema=True, showmedians=True)
-    plt.title('Custom violinplot 1', fontsize=10)
-
+    plt.title('Latency', fontsize=10)
+    plt.xticks(x_pos,label)
     plt.show()
 
 
@@ -265,10 +292,13 @@ def boxplot():
 if __name__ == "__main__":
     #video_path = "/home/dhaval/piyush/Usecases_dataset/P3_car_left_car.mp4"
     video_path = "/home/dhaval/piyush/Usecases_dataset/fall_detection/Lecture room/Videos/video (1).avi"
-    stream_video(video_path)
-    violinplot(time_list, ['PPhash'])
+    algolist = [average_hash_distance, difference_hash_distance, perceptual_hash_distance, wavelet_hash_distance, Histogram_frame_distance]
+    for algo in algolist:
+        stream_video(video_path, algo)
 
-
+    print('Len of time list*******', len(final_latency))
+    #print('Len of distance list*******', distance_list)
+    violin_plot(final_latency, ['AH','DH','PH','WH', 'HH'])
 
 
 
