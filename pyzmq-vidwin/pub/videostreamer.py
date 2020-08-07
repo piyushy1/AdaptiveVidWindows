@@ -1,7 +1,7 @@
 import cv2
 import time
 
-def stream(video_path, socket):
+def stream(video_path):
     cap = cv2.VideoCapture(video_path)
 
     # read the fps so that opencv read with same fps speed
@@ -35,19 +35,20 @@ def stream(video_path, socket):
     # window.assign_window()
 
     # process video
-    while(True):
+    while True:
         # Capture frame-by-frame
 
         # frame_info_list = []
         ret, frame = cap.read()
         if not ret:
             break
-        md = dict(
-            dtype = str(frame.dtype),
-            shape = frame.shape,
-        )
-        socket.send_json(md)
-        socket.send(frame)
+        # md = dict(
+        #     dtype = str(frame.dtype),
+        #     shape = frame.shape,
+        # )
+        # socket.send_json(md)
+        # socket.send(frame)
+        yield frame
         print(f'Frame count = {frame_count}')
 
         # need to set the frame rate:
@@ -61,7 +62,7 @@ def stream(video_path, socket):
         #     frame_info_list.append(frame)
         #     self.publisher_queue.put(frame_info_list)
 
-        time.sleep(sleep_time)
+        # time.sleep(sleep_time)
         frame_count += 1
         # Our operations on the frame come here
         #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -69,8 +70,8 @@ def stream(video_path, socket):
         #cv2.imshow(str(self.publisher_id), gray)
 
         #print queue size
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+        #     break
 
     # print("PublisherID "+ str(self.publisher_id) +"  Queue SIZE...."+ str(Config.publisher_queue_map.get(self.publisher_id).qsize()))
     dt2 = time.time()

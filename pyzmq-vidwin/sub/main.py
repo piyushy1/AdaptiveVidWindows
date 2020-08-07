@@ -17,15 +17,18 @@ def subscriber(ip="0.0.0.0", port=5551):
     print("Sub bound to: {}\nWaiting for data...".format(url))
 
 
-    # md = socket.recv_json()
+    # print(socket.recv_string())
+    # print(socket.recv_string())
+
     rc = 1
     while True:
         md = socket.recv_json()
+        # print(md)
+        # continue
         msg = socket.recv(copy=True)
         buf = memoryview(msg)
         A = numpy.frombuffer(buf, dtype=md['dtype'])
-        # print(A.reshape(md['shape']))
-
+        print(A.reshape(md['shape']))
         print(f'Receive count = {rc}, md = {md}')
         rc += 1
 
