@@ -16,7 +16,7 @@ import time
 
 final_latency = []
 distance_list = []
-memory_list = []
+batch_count_list = []
 
 # tutorial to look for explanation https://fullstackml.com/wavelet-image-hash-in-python-3504fdd282b5
 
@@ -206,6 +206,7 @@ def CVtoPILformat(img):
 # function to stream video to get frame distance of different similarity algo.
 def stream_video(video, algo):
     latency_list = []
+    batch_list = []
     video = cv2.VideoCapture(video)
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     # video.set(cv2.CAP_PROP_FPS, int(5))
@@ -219,10 +220,10 @@ def stream_video(video, algo):
     while video.isOpened():
 
         # there is some video release error so breaking loop before final frmae.
-        if i == total:
+        if i == 1090:
             # get the latency for all similarity algo.
             final_latency.append(np.array(latency_list))
-
+            batch_count_list.append(np.array(batch_list))
             break
 
         else:
@@ -250,10 +251,19 @@ def stream_video(video, algo):
                 #dist = average_hash_distance(frame, temp_block[0])
                 latency_list.append(latency)
                 distance_list.append(dist)
-                dist = np.std(minmax_scale(distance_list, feature_range=(0, 1), axis=0, copy=True))
-                print(dist)
-                if dist > 0.2:
+                norm_list = minmax_scale(distance_list, feature_range=(0, 1), axis=0, copy=True)
+                dist = np.std(norm_list)
+                print('Distance', dist)
+                # if algo == Histogram_frame_distance:
+                #     dist = np.std(distance_list)
+                #     print('Distance', dist)
+                # else:
+                #     dist = np.std(norm_list)
+
+                #print(dist, dist/np.mean(norm_list))
+                if dist > 0.5:
                     print("New block found separate - len ", len(temp_block))
+                    batch_list.append(len(temp_block))
                     temp_block.clear()
                     counter.clear()
                     distance_list.clear()
@@ -264,7 +274,7 @@ def stream_video(video, algo):
 
         #cv2.imshow("Changed", frame)
 
-        time.sleep(1/video.get(cv2.CAP_PROP_FPS))
+        #time.sleep(1/video.get(cv2.CAP_PROP_FPS))
 
         if cv2.waitKey(1) & 0xFF == ord('q'):  # press q to quit
             break
@@ -290,16 +300,18 @@ def boxplot():
     print('write code of box plot')
 
 if __name__ == "__main__":
-    #video_path = "/home/dhaval/piyush/Usecases_dataset/P3_car_left_car.mp4"
-    video_path = "/home/dhaval/piyush/Usecases_dataset/fall_detection/Lecture room/Videos/video (1).avi"
-    algolist = [average_hash_distance, difference_hash_distance, perceptual_hash_distance, wavelet_hash_distance, Histogram_frame_distance]
+    video_path = "/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4"
+    #video_path = "/home/dhaval/piyush/Usecases_dataset/fall_detection/Lecture room/Videos/video (1).avi"
+    #algolist = [average_hash_distance, difference_hash_distance, perceptual_hash_distance, wavelet_hash_distance, Histogram_frame_distance]
+    #algolist = [average_hash_distance, difference_hash_distance, perceptual_hash_distance, wavelet_hash_distance]
+    algolist = [Histogram_frame_distance]
     for algo in algolist:
         stream_video(video_path, algo)
 
     print('Len of time list*******', len(final_latency))
     #print('Len of distance list*******', distance_list)
-    violin_plot(final_latency, ['AH','DH','PH','WH', 'HH'])
-
+    #violin_plot(final_latency, ['AH','DH','PH','WH', 'HH'])
+    violin_plot(batch_count_list, ['HH'])
 
 
     #average_hash_distance('/home/dhaval/piyush/NEW Evaluation/images/image+1.png', '/home/dhaval/piyush/NEW Evaluation/images/image+100.png')
