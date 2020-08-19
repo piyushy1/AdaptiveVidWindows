@@ -13,6 +13,7 @@ from window import sliding
 from multiprocessing import Process, Queue
 import queue
 import pickle as pk
+import datetime
 
 def get_cpu():
     return psutil.cpu_percent()
@@ -57,8 +58,10 @@ def batcher(inp_q, out_q):
             new_frame = inp_q.get()
             # print(new_frame)
             if len(frames) == 25:
+                # put random batches
                 idx = random.randint(5,15)
                 out_q.put(frames[:int(idx/2)] + frames[int(3*idx/2):])
+                out_q.put(frames)
                 print('put')
                 frames = []
             frames.append(new_frame)
@@ -99,11 +102,11 @@ def publisher(ip="0.0.0.0", port=5551):
     wind = []
     import time
     ctr = 0
-    for frame in stream('midas.mp4'):
+    for frame in stream('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4'):
         # sliding_window_input_queue.put(frame)
         global g
         g = frame
-        batch_input_queue.put([frame,ctr])
+        batch_input_queue.put([frame,ctr,datetime.datetime.now()])
         # socket_send( (frame,ctr) , socket)
         ctr += 1
         # if len(wind) == 100:

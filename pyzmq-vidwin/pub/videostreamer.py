@@ -3,12 +3,17 @@ import time
 
 def stream(video_path):
     cap = cv2.VideoCapture(video_path)
+    # get frame dimension
+    width = cap.get(3)  # float
+    height = cap.get(4)  # float
 
+    print('width, height:', width, height)
     # read the fps so that opencv read with same fps speed
     fps = cap.get(cv2.CAP_PROP_FPS)
     print(f"FPS for video: {video_path} : {fps}")
     # time to sleep the process
     sleep_time = 1/(fps+2) # 2 is added to make the reading frame time and video time equivalnet. this is an empirical value may change for others.
+    #sleep_time = 1 / (10)
     print(f"Sleep Time : { sleep_time}")
     # to check the frame count
     frame_count_num = cap.get(cv2.CAP_PROP_FRAME_COUNT)
