@@ -8,6 +8,7 @@ import numpy
 import queue
 from window import sliding
 from multiprocessing import Process, Queue
+import datetime
 # os.system('hostname -I')
 # a = []
 import pickle as pk
@@ -32,6 +33,16 @@ def block(inp_q):
             #     slide_window.append(frame)
         except queue.Empty:
             pass
+
+latency =[]
+def measure_latency(batch,time):
+    # only transmission latency
+    latency.append((time-batch[-1][2]).total_seconds()*1000)
+
+
+    # avg latency of batch plus transmission
+    # for i in batch:
+    #     latency.append((time-i[2]).total_seconds()*1000)
 
 packs = []
 
@@ -72,8 +83,11 @@ def subscriber(ip="0.0.0.0", port=5551):
         # continue
         msg = socket.recv()
         A = pk.loads(msg)
+        #measure_latency(A,datetime.datetime.now())
+
         for i in A:
             sliding_window_input_queue.put(i)
+
         # packs.append(A)
         # for i in A:
         #     print(i[1])
@@ -86,6 +100,10 @@ def subscriber(ip="0.0.0.0", port=5551):
         # gc.collect()
         print(f'Receive count = {rc}')
         rc += 1
+
+        # if rc%1 == 0:
+        #     print('Average_Latency******', sum(latency) / len(latency) )
+        #     latency.clear()
 
 
         # wait for publisher data
