@@ -1,19 +1,20 @@
 # Name Piyush Yadav
 
-import argparse
+import os
+import cv2
 import zmq
 import time
-import os
-os.system('hostname -I')
-import psutil
-import numpy as np
-import cv2
-from videostreamer import stream
-from window import sliding
-from multiprocessing import Process, Queue
 import queue
-import pickle as pk
+import psutil
+import argparse
 import datetime
+import numpy as np
+import pickle as pk
+from window import sliding
+from probe import get_i_frames
+from videostreamer import stream
+from multiprocessing import Process, Queue
+# os.system('hostname -I')
 
 def get_cpu():
     return psutil.cpu_percent()
@@ -57,7 +58,7 @@ def batcher(inp_q, out_q):
         try:
             new_frame = inp_q.get()
             # print(new_frame)
-            if len(frames) == 25:
+            if len(frames) == 25 or new_frame[2] == 1:
                 # put random batches
                 idx = random.randint(5,15)
                 out_q.put(frames[:int(idx/2)] + frames[int(3*idx/2):])
@@ -74,19 +75,7 @@ def publisher(ip="0.0.0.0", port=5551):
     # ZMQ connection
     url = f"tcp://{ip}:{port}"
     print("Going to connect to: {}".format(url))
-    # ctx = zmq.Context()
-    # socket = ctx.socket(zmq.PUB)
-    # socket = ctx.socket(zmq.PAIR)
-    # socket.connect(url)  # publisher connects to subscriber
     print("Pub connected to: {}\nSending data...".format(url))
-    i = 0
-
-    # socket.send_string("Testing")
-
-    # sliding_window_input_queue = Queue()
-    # sliding_window_output_queue = Queue()
-    # sliding_process = Process(name='Slider',target=sliding, args=(sliding_window_input_queue, sliding_window_output_queue,5,2,))
-    # sliding_process.start()
 
     batch_input_queue = Queue()
     batch_output_queue = Queue()
@@ -101,56 +90,19 @@ def publisher(ip="0.0.0.0", port=5551):
 
     wind = []
     import time
-    ctr = 0
-    for frame in stream('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4'):
-        # sliding_window_input_queue.put(frame)
-        global g
-        g = frame
-        batch_input_queue.put([frame,ctr,datetime.datetime.now()])
-        # socket_send( (frame,ctr) , socket)
+    ctr = 1
+
+    video_path = 'midas.mp4'
+    iframes_list = get_i_frames(video_path)
+    for frame in stream(video_path):
+        if ctr in iframes_list:
+            batch_input_queue.put([frame,ctr,1])  # an iframe
+        else:
+            batch_input_queue.put([frame,ctr,0])
+
         ctr += 1
-        # if len(wind) == 100:
-        #     st = time.time()
-        #     socket_send(np.array(wind), socket)
-        #     wind = []
-        #     break
-        # wind.append(frame)
         time.sleep(0.1)
-    # print(time.time() - st)
-    # st = time.time()
-    # for i in wind:
-    #     socket_send(i, socket)
-    
-
-        # print(gc.get_stats())
-        # gc.collect()
-
-    # sliding_window_input_queue.put('END')
-    # sliding_process.join()
-    # socket_send_window_process.join()
-
-
-    # socket.send_json(md, 0|zmq.SNDMORE)
-
-    # while True:
-    #     topic = 'foo'.encode('ascii')
-    #     msg = f'test {i}'.encode('ascii')
-        
-    #     usage_topic = 'usage'.encode('ascii')
-    #     socket.send_multipart([topic, msg])  # 'test'.format(i)
-    #     time.sleep(.5)
-    #     i += 1
-    #     print(i)
-
-
-
-    #     # publish data
-    #     socket.send_multipart([topic, msg*200])  # 'test'.format(i)
-    #     socket.send_multipart([usage_topic, f'CPU - {get_cpu()}'.encode('ascii')])  # 'test'.format(i)
-    #     socket.send_multipart([usage_topic, f'VRAM - {get_vram()}'.encode('ascii')])  # 'test'.format(i)
-    #     print(f"On topic {topic}, send data: {msg}")
-    #     # print(f"On topic {usage_topic}, send data: {}")
-    #     # print(f"On topic {usage_topic}, send data: {f'{get_vram()}'.encode('ascii')}")
+   
 
 
 if __name__ == "__main__":

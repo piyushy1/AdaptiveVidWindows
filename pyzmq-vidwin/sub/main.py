@@ -1,38 +1,37 @@
 # Piyush Yadav
 
-import time
-import argparse
-import zmq
 import os
+import zmq
+import time
 import numpy
 import queue
+import argparse
+import datetime
+import pickle as pk
 from window import sliding
 from multiprocessing import Process, Queue
-import datetime
 # os.system('hostname -I')
-# a = []
-import pickle as pk
-# gc.set_debug(gc.DEBUG_LEAK)
 
 def block(inp_q):
-    # import gc
-    while True:
-        try:
-            frame = inp_q.get(timeout=0.1)
-            # print(frame, len(frame))
-            # print(gc.get_stats())
-            if type(frame) == str and frame == 'END':
-                # out_q.put('END')
-                break
-            print(f'New block len- {len(frame)} and time start = {frame[0][1]} and end is = {frame[-1][1]}')
-            del frame
-            # if len(slide_window) == time_segment:
-            #     out_q.put(slide_window)
-            #     slide_window = slide_window[slide_time:]
-            # else:
-            #     slide_window.append(frame)
-        except queue.Empty:
-            pass
+    try:
+        while True:
+            try:
+                frame = inp_q.get(timeout=0.1)
+                # print(frame, len(frame))
+                if type(frame) == str and frame == 'END':
+                    # out_q.put('END')
+                    break
+                print(f'New block len- {len(frame)} and time start = {frame[0][1]} and end is = {frame[-1][1]}')
+                del frame
+                # if len(slide_window) == time_segment:
+                #     out_q.put(slide_window)
+                #     slide_window = slide_window[slide_time:]
+                # else:
+                #     slide_window.append(frame)
+            except queue.Empty:
+                pass
+    except Exception as e:
+        print(e)
 
 latency =[]
 def measure_latency(batch,time):
@@ -59,13 +58,8 @@ def subscriber(ip="0.0.0.0", port=5551):
     socket = ctx.socket(zmq.PAIR)
     socket.bind(url)  # connects to pub server
 
-    # print(socket.recv_string())
     print("Sub bound to: {}\nWaiting for data...".format(url))
 
-    # print(socket.recv_string())
-    # print(socket.recv_string())   
-    # socket.send_json({"this":"and that"})
-    # time.sleep(3)
     rc = 1
     
     sliding_window_input_queue = Queue()
@@ -78,38 +72,21 @@ def subscriber(ip="0.0.0.0", port=5551):
     block_process.start()
 
     while True:
-        # md = socket.recv_json()
-        # print(md)
-        # continue
         msg = socket.recv()
         A = pk.loads(msg)
-        #measure_latency(A,datetime.datetime.now())
+        # measure_latency(A,datetime.datetime.now())
 
         for i in A:
+            if i[2] == 1:
+                print("i frame received")
             sliding_window_input_queue.put(i)
 
-        # packs.append(A)
-        # for i in A:
-        #     print(i[1])
-        # buf = memoryview(msg)
-        # A = numpy.frombuffer(buf, dtype=md['dtype']).reshape(md['shape'])
-        # a.append(A.reshape(md['shape']))
-        # print(A.reshape(md['shape']))
-        # sliding_window_input_queue.put(A)
-        # print(gc.get_stats())
-        # gc.collect()
         print(f'Receive count = {rc}')
         rc += 1
 
         # if rc%1 == 0:
         #     print('Average_Latency******', sum(latency) / len(latency) )
         #     latency.clear()
-
-
-        # wait for publisher data
-        # print(socket.recv())
-        # topic, msg = socket.recv_multipart()
-        # print("On topic {}, received data: {}".format(topic, msg))
 
 
 if __name__ == "__main__":
