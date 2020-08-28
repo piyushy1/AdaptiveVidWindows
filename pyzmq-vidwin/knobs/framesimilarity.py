@@ -204,7 +204,7 @@ def CVtoPILformat(img):
     return im_pil
 
 # function to stream video to get frame distance of different similarity algo.
-def stream_video(video, algo):
+def stream_video(video, algo, dist_threshold):
     latency_list = []
     batch_list = []
     video = cv2.VideoCapture(video)
@@ -220,7 +220,7 @@ def stream_video(video, algo):
     while video.isOpened():
 
         # there is some video release error so breaking loop before final frmae.
-        if i == 1090:
+        if i == 585:
             # get the latency for all similarity algo.
             final_latency.append(np.array(latency_list))
             batch_count_list.append(np.array(batch_list))
@@ -251,8 +251,8 @@ def stream_video(video, algo):
                 #dist = average_hash_distance(frame, temp_block[0])
                 latency_list.append(latency)
                 distance_list.append(dist)
-                norm_list = minmax_scale(distance_list, feature_range=(0, 1), axis=0, copy=True)
-                dist = np.std(norm_list)
+                #norm_list = minmax_scale(distance_list, feature_range=(0, 1), axis=0, copy=True)
+                #dist = np.std(norm_list)
                 print('Distance', dist)
                 # if algo == Histogram_frame_distance:
                 #     dist = np.std(distance_list)
@@ -261,7 +261,7 @@ def stream_video(video, algo):
                 #     dist = np.std(norm_list)
 
                 #print(dist, dist/np.mean(norm_list))
-                if dist > 0.5:
+                if dist < dist_threshold:
                     print("New block found separate - len ", len(temp_block))
                     batch_list.append(len(temp_block))
                     temp_block.clear()
@@ -300,18 +300,28 @@ def boxplot():
     print('write code of box plot')
 
 if __name__ == "__main__":
-    video_path = "/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4"
+    video_path = "/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Test Images/nomotion.mp4"
+
     #video_path = "/home/dhaval/piyush/Usecases_dataset/fall_detection/Lecture room/Videos/video (1).avi"
     #algolist = [average_hash_distance, difference_hash_distance, perceptual_hash_distance, wavelet_hash_distance, Histogram_frame_distance]
     #algolist = [average_hash_distance, difference_hash_distance, perceptual_hash_distance, wavelet_hash_distance]
-    algolist = [Histogram_frame_distance]
-    for algo in algolist:
-        stream_video(video_path, algo)
 
-    print('Len of time list*******', len(final_latency))
+    distance_threshold =  [0.99, 0.98, 0.95,0.93, 0.90,0.85,0.80]
+    algolist = [Histogram_frame_distance]
+    # for comparing different similarity algo
+
+    # for algo in algolist:
+    #     stream_video(video_path, algo)
+
+    for distance in distance_threshold:
+        stream_video(video_path, Histogram_frame_distance, distance)
+
+    # print('Len of time list*******', len(final_latency))
+
     #print('Len of distance list*******', distance_list)
     #violin_plot(final_latency, ['AH','DH','PH','WH', 'HH'])
-    violin_plot(batch_count_list, ['HH'])
+
+    violin_plot(batch_count_list, ['0.99','0.98', '0.95','0.93', '0.90','0.85','0.80'])
 
 
     #average_hash_distance('/home/dhaval/piyush/NEW Evaluation/images/image+1.png', '/home/dhaval/piyush/NEW Evaluation/images/image+100.png')
@@ -323,5 +333,5 @@ if __name__ == "__main__":
     # perceptual_hash_distance('/home/dhaval/piyush/NEW Evaluation/images/image+1.png', '/home/dhaval/piyush/NEW Evaluation/images/image+100.png')
     #perceptual_hash_distance1('/home/dhaval/piyush/NEW Evaluation/images/image+1.png', '/home/dhaval/piyush/NEW Evaluation/images/img00124.jpg')
     # Histogram_frame_distance('/home/dhaval/piyush/NEW Evaluation/images/image+1.png', '/home/dhaval/piyush/NEW Evaluation/images/image+100.png')
-    # CNN_distance('/home/dhaval/piyush/NEW Evaluation/images/image+1.png', '/home/dhaval/piyush/NEW Evaluation/images/image+100.png')
+    #CNN_distance('/home/dhaval/piyush/NEW Evaluation/images/image+1.png', '/home/dhaval/piyush/NEW Evaluation/images/image+100.png')
 

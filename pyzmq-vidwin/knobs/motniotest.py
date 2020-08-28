@@ -17,7 +17,7 @@ def extract_motion(video_path):
     global bgs
     while True:
         ret, frame = cap.read()
-        frame = cv2.resize(frame, (500,500), interpolation = cv2.INTER_AREA)
+        #frame = cv2.resize(frame, (500,500), interpolation = cv2.INTER_AREA)
         if index == 100:
             return motion_ratio
         if index ==0:
@@ -45,25 +45,28 @@ def plotgraph(throughput_list):
     # t_y = np.array([1,5,10,20,30,40,50,60,70,80,90,100])
     batch_x_ticks = [frame for frame in range(len(throughput_list[0])) ]
     t_y = np.array([frame for frame in range(len(throughput_list[0])) ])
-    # plt.plot(t_y, throughput_list[0], 'r^--',t_y, throughput_list[1], 'mD-',t_y, throughput_list[2], '#92D050',t_y, throughput_list[3], 'bo--')
-    for i in range(len(throughput_list)):
-        plt.plot(t_y,throughput_list[i])
+    plt.plot(t_y, throughput_list[0], 'r^--',t_y, throughput_list[1], 'm*-',t_y, throughput_list[2], 'gD-',t_y, throughput_list[3], 'bo-')
+    # for i in range(len(throughput_list)):
+    #     plt.plot(t_y,throughput_list[i])
     #plt.plot(t_y, throughput_list[0], 'r^--',t_y, throughput_list[1], 'mD-',t_y, throughput_list[2],'#92D050',t_y, throughput_list[3],'bo--')
-    #plt.legend(['Resnet50','VGG16', 'Mobilenet' , 'Mobilenetv2'], loc='lower right',prop={'size':10},labelspacing=0.2)
-    plt.xlabel('Moving Ratio')
-    plt.ylabel('Frames')
+    plt.legend(['Objects with no motion','Objects with motion at start', 'Objects with continuous motion','Sudden burst of objects with motion'], loc='upper right',prop={'size':10},labelspacing=0.2)
+    plt.xlabel('Frames')
+    plt.ylabel('Moving Ratio')
+    plt.ylim(-4, 4)
     #plt.xticks(batch_x_ticks)
     #plt.savefig('throughput6.svg', format='svg', dpi=1000,bbox_inches='tight')
     plt.show()
 
 #videolist = ['nomotion.mp4', 'somemotion.mp4', 'highmotion.mp4', 'veryhighmotion.mp4']
-videolist = os.listdir('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Test Images')
+videolist = os.listdir('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Videosonbasisofmotion')
 
 motion_data = []
 
 for video in videolist:
     print('video:', video)
-    motion_data.append(np.array(extract_motion('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Test Images/'+video)))
+    motion_data.append(np.array(extract_motion('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Videosonbasisofmotion/'+video)))
+
+#plotgraph(motion_data)
 
 data = [data.reshape((data.size,1)) for data in motion_data]
 
@@ -74,23 +77,22 @@ newarray = np.rollaxis(newarray,-1)
 print(newarray.shape)
 seed = 0
 # Keep only 50 time series
-X_train = TimeSeriesScalerMeanVariance().fit_transform(newarray[:90])
+X_train = TimeSeriesScalerMeanVariance().fit_transform(newarray[:280])
 # Make time series shorter
 #X_train = TimeSeriesResampler(sz=40).fit_transform(X_train)
 sz = X_train.shape[1]
 
-#plotgraph(motion_data)
-#print(a)
 
 # Euclidean k-means
 print("Euclidean k-means")
-km = TimeSeriesKMeans(n_clusters=5, verbose=True, random_state=seed)
+km = TimeSeriesKMeans(n_clusters=4, verbose=True, random_state=seed)
 y_pred = km.fit_predict(X_train)
 
 plt.figure()
-for yi in range(5):
-    plt.subplot(5, 5, yi + 1)
+for yi in range(4):
+    #plt.subplot(2, 2, yi + 1)
     for xx in X_train[y_pred == yi]:
+        plt.subplot(2, 2, yi + 1)
         plt.plot(xx.ravel(), "k-", alpha=.2)
     plt.plot(km.cluster_centers_[yi].ravel(), "r-")
     plt.xlim(0, sz)
