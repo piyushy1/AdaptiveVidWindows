@@ -12,7 +12,7 @@ def stream(video_path):
     fps = cap.get(cv2.CAP_PROP_FPS)
     print(f"FPS for video: {video_path} : {fps}")
     # time to sleep the process
-    sleep_time = 1/(fps+2) # 2 is added to make the reading frame time and video time equivalnet. this is an empirical value may change for others.
+    sleep_time = 1/(fps) # 2 is added to make the reading frame time and video time equivalnet. this is an empirical value may change for others.
     #sleep_time = 1 / (10)
     print(f"Sleep Time : { sleep_time}")
     # to check the frame count
@@ -67,7 +67,7 @@ def stream(video_path):
         #     frame_info_list.append(frame)
         #     self.publisher_queue.put(frame_info_list)
 
-        # time.sleep(sleep_time)
+        time.sleep(sleep_time)
         frame_count += 1
         # Our operations on the frame come here
         #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

@@ -71,6 +71,7 @@ def batcher(inp_q, out_q):
 
 
 g = None
+
 def publisher(ip="0.0.0.0", port=5551):
     # ZMQ connection
     url = f"tcp://{ip}:{port}"
@@ -92,7 +93,7 @@ def publisher(ip="0.0.0.0", port=5551):
     import time
     ctr = 1
 
-    video_path = 'midas.mp4'
+    video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4'
     iframes_list = get_i_frames(video_path)
     for frame in stream(video_path):
         if ctr in iframes_list:
@@ -101,9 +102,8 @@ def publisher(ip="0.0.0.0", port=5551):
             batch_input_queue.put([frame,ctr,0])
 
         ctr += 1
-        time.sleep(0.1)
+        #time.sleep(0.1)
    
-
 
 if __name__ == "__main__":
     # command line arguments
