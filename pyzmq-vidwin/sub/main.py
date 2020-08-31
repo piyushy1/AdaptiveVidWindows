@@ -11,6 +11,7 @@ from window import sliding
 from multiprocessing import Process, Queue
 import numpy
 from dnnmodel import load_DNN_model
+from dnnmodel import batch_of_images
 
 
 # os.system('hostname -I')
@@ -76,14 +77,15 @@ def subscriber(ip="0.0.0.0", port=5551):
     block_process.start()
 
     # load the DNN Model
-    model = load_DNN_model(ResNet50)
+    model = load_DNN_model('MobileNet')
 
     while True:
         msg = socket.recv()
         A = pk.loads(msg)
         # measure_latency(A,datetime.datetime.now())
-
         # implement DNN Models
+        batch_time = batch_of_images(A,model)
+        print('The batch time is: ',batch_time)
 
         for i in A:
             if i[2] == 1:

@@ -8,6 +8,7 @@ from keras.models import load_model
 from keras.applications.resnet50 import ResNet50
 from keras.applications.vgg16 import VGG16
 from keras.applications.mobilenet import mobilenet
+from keras.applications.mobilenet import decode_predictions
 
 
 def load_DNN_model(model_name):
@@ -37,15 +38,32 @@ def load_DNN_model(model_name):
         model_mobilenetv2 = keras.applications.mobilenet_v2.MobileNetV2()
         return model_mobilenetv2
 
+# batch holder: function to hold the batch size
+def batch_of_images(frame_list, model):
+    #batch_size = 3
+    batch_holder = np.zeros((len(frame_list), 224, 224, 3))
+    i=0
+    for frame in frame_list:
+        batch_holder[i]= frame[0] # [0]because each frame is attached with time and other metrics
+        i +=1
+
+    #frame_time = frame_by_frame_prediction(batch_holder,model)
+    batch_time =  batch_prediciton(batch_holder, model)
+    return batch_time
+    #return frame_time,batch_time
+
+
 # generate batch predictions
 def batch_prediciton(batch_holder,model):
   # get the intial date time processing
   dt1 = datetime.now()
   #image = preprocess_input(batch_holder)
   pred = model.predict(batch_holder)
+  print('Predicted:', decode_predictions(pred, top=3)[0])
+
   # for k in range(0,batch_holder.shape[0]):
-  #     print(k)
-  #     #decode_predictions(pred,k)
+  #     #print(k)
+  #     decode_predictions(pred,k)
 
   # get final time of batch prediction
   dt2 = datetime.now()
@@ -54,11 +72,14 @@ def batch_prediciton(batch_holder,model):
 
 
 # decode predictions
-def decode_predictions(pred,k):
-    class_labels = ['car','person']
-    #for top-k score
-    index = pred.argsort()[-2:][::-1]
+# def decode_predictions(pred,k):
+#     class_labels = ['car','person']
+#     #for top-k score
+#     index = pred.argsort()[-2:][::-1]
+#
+#     #print("Prdicted label for Image: ", k)
+#     # for i in range(index[0].shape[0]):
+#     #     print(class_labels[index[0][i]], " : ", pred[0][index[0][i]])
 
-    print("Prdicted label for Image: ", k)
-    # for i in range(index[0].shape[0]):
-    #     print(class_labels[index[0][i]], " : ", pred[0][index[0][i]])
+
+
