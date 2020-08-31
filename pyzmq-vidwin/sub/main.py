@@ -3,13 +3,16 @@
 import os
 import zmq
 import time
-import numpy
 import queue
 import argparse
 import datetime
 import pickle as pk
 from window import sliding
 from multiprocessing import Process, Queue
+import numpy
+from dnnmodel import load_DNN_model
+
+
 # os.system('hostname -I')
 
 def block(inp_q):
@@ -32,6 +35,7 @@ def block(inp_q):
                 pass
     except Exception as e:
         print(e)
+
 
 latency =[]
 def measure_latency(batch,time):
@@ -71,10 +75,15 @@ def subscriber(ip="0.0.0.0", port=5551):
     block_process = Process(name='Blocker', target=block, args=(sliding_window_output_queue,))
     block_process.start()
 
+    # load the DNN Model
+    model = load_DNN_model(ResNet50)
+
     while True:
         msg = socket.recv()
         A = pk.loads(msg)
         # measure_latency(A,datetime.datetime.now())
+
+        # implement DNN Models
 
         for i in A:
             if i[2] == 1:
