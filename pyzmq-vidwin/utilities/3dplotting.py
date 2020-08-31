@@ -15,7 +15,7 @@ cpu = [1,2,3,4,5,6,7,8,9]
 #zdata = 15 * np.random.random(100)
 #xdata = np.sin(zdata) + 0.1 * np.random.randn(100)
 #ydata = np.cos(zdata) + 0.1 * np.random.randn(100)
-img =ax.scatter3D(memory, latency,batch, c= memory, cmap= plt.hot(), s= throughput)
+img =ax.scatter3D(throughput, latency,batch, s= memory, c= cpu)
 ax.set_xlabel('Throughput')
 ax.set_ylabel('Latency')
 ax.set_zlabel('Batch')
