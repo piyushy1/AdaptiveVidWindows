@@ -8,7 +8,7 @@ from keras.models import load_model
 from keras.applications.resnet50 import ResNet50
 from keras.applications.vgg16 import VGG16
 from keras.applications.mobilenet import mobilenet
-from keras.applications.mobilenet import decode_predictions
+from keras.applications.imagenet_utils import decode_predictions
 
 
 def load_DNN_model(model_name):
@@ -59,7 +59,7 @@ def batch_prediciton(batch_holder,model):
   dt1 = datetime.now()
   #image = preprocess_input(batch_holder)
   pred = model.predict(batch_holder)
-  print('Predicted:', decode_predictions(pred, top=3)[0])
+  print('Predicted:', decode_predictions(pred, top=3))
 
   # for k in range(0,batch_holder.shape[0]):
   #     #print(k)

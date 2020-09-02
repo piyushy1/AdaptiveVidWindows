@@ -22,6 +22,9 @@ def get_cpu():
 def get_vram():
     return psutil.virtual_memory().percent
 
+def get_available_memory():
+    return psutil.virtual_memory().available * 100 / psutil.virtual_memory().total
+
 def socket_send(frame, socket):
     # md = dict(
     #         dtype = str(frame.dtype),
@@ -58,10 +61,10 @@ def batcher(inp_q, out_q):
         try:
             new_frame = inp_q.get()
             # print(new_frame)
-            if len(frames) == 25 or new_frame[2] == 1:
+            if len(frames) == 50 or new_frame[2] == 1:
                 # put random batches
                 idx = random.randint(5,15)
-                out_q.put(frames[:int(idx/2)] + frames[int(3*idx/2):])
+                #out_q.put(frames[:int(idx/2)] + frames[int(3*idx/2):])
                 out_q.put(frames)
                 print('put')
                 frames = []
@@ -93,14 +96,15 @@ def publisher(ip="0.0.0.0", port=5551):
     import time
     ctr = 1
 
-    video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4'
+    #video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4'
+    video_path = '/data1/test2.mp4'
     iframes_list = get_i_frames(video_path)
     for frame in stream(video_path):
         if ctr in iframes_list:
             batch_input_queue.put([frame,ctr,1])  # an iframe
         else:
             batch_input_queue.put([frame,ctr,0])
-
+        print('CPU, MEMORY: ',get_cpu(), get_vram(), get_available_memory())
         ctr += 1
         #time.sleep(0.1)
    

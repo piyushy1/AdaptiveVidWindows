@@ -12,12 +12,13 @@ def stream(video_path):
     fps = cap.get(cv2.CAP_PROP_FPS)
     print(f"FPS for video: {video_path} : {fps}")
     # time to sleep the process
-    sleep_time = 1/(fps) # 2 is added to make the reading frame time and video time equivalnet. this is an empirical value may change for others.
-    #sleep_time = 1 / (10)
+    #sleep_time = 1/(fps) # 2 is added to make the reading frame time and video time equivalnet. this is an empirical value may change for others.
+    sleep_time = 1 / (30)
     print(f"Sleep Time : { sleep_time}")
     # to check the frame count
     frame_count_num = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-    duration = frame_count_num/fps
+    #duration = frame_count_num/fps
+    duration = frame_count_num / 30
     print(f"Duration of video {duration%60}")
 
     print("Video Publisher initiated== {video_path}")
@@ -54,7 +55,7 @@ def stream(video_path):
         # socket.send_json(md)
         # socket.send(frame)
         # for resizing the frame...
-        frame = cv2.resize(frame, (224, 224))
+        #frame = cv2.resize(frame, (224, 224))
         yield frame
         print(f'Frame count = {frame_count}')
 
