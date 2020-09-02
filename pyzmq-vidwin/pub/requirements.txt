@@ -1,4 +1,4 @@
 pyzmq
 psutil
 opencv-contrib-python-headless
-ffprobe
+ffmpeg
