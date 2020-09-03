@@ -1,5 +1,6 @@
 #sub
-FROM python:3.7.1-slim
+#FROM python:3.7.1-slim
+FROM gw000/keras:2.1.4-py3-tf-gpu
 
 MAINTAINER Piyush
 
@@ -7,9 +8,14 @@ RUN apt-get update && \
   apt-get install -y --no-install-recommends \
   gcc iproute wondershaper
 
+
 WORKDIR /app
 COPY requirements.txt /app
+COPY dnnmodel.py /app
+COPY window.py /app
+
 RUN pip install -r requirements.txt
+
 COPY main.py /app/main.py
 
 # allow other containers/PCs to connect; maybe not necessary

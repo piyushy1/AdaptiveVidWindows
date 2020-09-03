@@ -85,9 +85,9 @@ def subscriber(ip="0.0.0.0", port=5551):
         # measure_latency(A,datetime.datetime.now())
         # implement DNN Models
         if len(A) !=0:
-            #batch_time = batch_of_images(A,model)
-            #print('The batch time is: ',rc, len(A), batch_time)
-            print('OK')
+            batch_time = batch_of_images(A,model)
+            print('The batch time is: ',rc, len(A), batch_time)
+            #print('OK')
 
         for i in A:
             if i[2] == 1:
