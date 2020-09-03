@@ -17,3 +17,5 @@ services:
     # stdin_open: true  # same as docker -i (interactive)
     tty: true  # same as docker -t (tty); see if pub actually publishes messages to sub
     command: ["python", "main.py", "--ip", "sub"]  # pub module connects, therefore sub Docker IP needed
+    volumes:
+      - ./home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/testhost/:/app
