@@ -1,0 +1,12 @@
+version: '2.3'
+services:
+
+  sub:
+    privileged: true
+    runtime: nvidia
+    image: subscriber:dev
+    build:
+      context: '.'
+      dockerfile: 'Dockerfile'
+    tty: true
+    command: ["python3", "/app/main.py", "--ip", "0.0.0.0"]
