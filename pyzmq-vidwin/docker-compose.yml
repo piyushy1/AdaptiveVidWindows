@@ -1,21 +1,24 @@
-version: "3"
+version: "2.3"
 services:
+
   sub:
+    privileged: true
+    runtime: nvidia
+    image: subscriber:dev
     build:
-      context: ./sub  # Docker context from folder of this file; needed to include requirement.txt
-      dockerfile: Dockerfile
-    ports:
-      - "5551:5551"  # map container interal 5550 port to publicly accessible 5550 port
-    # stdin_open: true  # same as docker -i (interactive)
-    tty: true  # same as docker -t (tty); see if sub actually receives pub messages
-    command: ["python", "main.py", "--ip", "0.0.0.0"]  # sub module binds, so no need for a specific IP
+      context: '.'
+      dockerfile: 'Dockerfile'
+    tty: true
+    command: [ "python3", "/app/main.py", "--ip", "0.0.0.0" ]
 
   pub:
+    image: publisher:dev
+    depends_on:
+      - sub
     build:
-      context: ./pub
-      dockerfile: Dockerfile
-    # stdin_open: true  # same as docker -i (interactive)
-    tty: true  # same as docker -t (tty); see if pub actually publishes messages to sub
-    command: ["python", "main.py", "--ip", "sub"]  # pub module connects, therefore sub Docker IP needed
+      context: '.'
+      dockerfile: 'Dockerfile'
+    tty: true
+    command: [ "python3", "/app/main.py", "--ip", "sub" ]
     volumes:
-      - ./home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/testhost/:/app
+      - ./pub/:/app

@@ -1,1 +1,4 @@
-pyzmq
+pyzmq==18.0.0
+keras-applications==1.0.7
+keras==2.2.4
+keras-preprocessing==1.0.9

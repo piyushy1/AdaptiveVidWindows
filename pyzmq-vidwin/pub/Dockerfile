@@ -12,16 +12,19 @@ RUN apt-get update && \
 
 
 WORKDIR /app
-COPY requirements.txt  /app
-COPY window.py /app
-COPY videostreamer.py /app
-COPY probe.py /app
-RUN pip install -r requirements.txt
+ADD . /app
+#COPY requirements.txt /app
+#COPY dnnmodel.py /app
+#COPY window.py /app
+#COPY mobilenet_model.h5 /app
 
-COPY main.py /app/main.py
+RUN pip install -r requirements.txt -i https://pypi.org/simple && \
+    rm -rf /tmp/pip* /root/.cache
+
+#COPY main.py /app/main.py
+
+# allow other containers/PCs to connect; maybe not necessary
+EXPOSE 5551
 
 # when using docker-compose, this command can be overwritten
-# Change "yo.ur.i.p" to your machine IP (something similar to: "192.168.99.1") when using `docker run `
-CMD ["python", "main.py", "--ip", "yo.ur.i.p"]
-#CMD ["python", "main.py", "--ip", "0.0.0.0"]
-#CMD ["python", "main.py", "--ip", "172.17.255.255"]
+CMD ["python", "/app/main.py", "--ip", "172.17.0.1"]

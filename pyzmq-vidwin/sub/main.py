@@ -3,7 +3,7 @@
 import os
 import zmq
 import time
-import queue
+#import queue
 import argparse
 import datetime
 import pickle as pk
@@ -25,7 +25,8 @@ def block(inp_q):
                 if type(frame) == str and frame == 'END':
                     # out_q.put('END')
                     break
-                print(f'New block len- {len(frame)} and time start = {frame[0][1]} and end is = {frame[-1][1]}')
+                #print(f'New block len- {len(frame)} and time start = {frame[0][1]} and end is = {frame[-1][1]}')
+                print('New block length:', len(frame))
                 del frame
                 # if len(slide_window) == time_segment:
                 #     out_q.put(slide_window)
@@ -50,11 +51,13 @@ def measure_latency(batch,time):
 
 packs = []
 
-def subscriber(ip="0.0.0.0", port=5551):
+def subscriber(ip="172.17.0.1", port=5551):
     # ZMQ connection
-    url = f"tcp://{ip}:{port}"
+    #url = f"tcp://{ip}:{port}"
+    url = "tcp://{}:{}".format(ip,port)
     # url = f"tcp://localhost:{port}"
-    print(f"Going to bind to: {url}")
+    #print(f"Going to bind to: {url}")
+    print("Going to bind to: {url}", url)
     ctx = zmq.Context()
     # socket = ctx.socket(zmq.SUB)
     # socket.bind(url)  # subscriber creates ZeroMQ socket
@@ -77,7 +80,7 @@ def subscriber(ip="0.0.0.0", port=5551):
     block_process.start()
 
     # load the DNN Model
-    model = load_DNN_model('MobileNet')
+    model = load_DNN_model('mobilenet_custom')
 
     while True:
         msg = socket.recv()
@@ -87,14 +90,15 @@ def subscriber(ip="0.0.0.0", port=5551):
         if len(A) !=0:
             batch_time = batch_of_images(A,model)
             print('The batch time is: ',rc, len(A), batch_time)
-            #print('OK')
+            print('OK')
 
         for i in A:
             if i[2] == 1:
                 print("i frame received")
             sliding_window_input_queue.put(i)
 
-        print(f'Receive count = {rc}')
+        #print(f'Receive count = {rc}')
+        print('Recieve Count:',rc)
         rc += 1
 
         # if rc%1 == 0:

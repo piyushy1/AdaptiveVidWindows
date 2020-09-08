@@ -17,7 +17,7 @@ def sliding(inp_q, out_q, time_segment, slide_time):
 
 
 	slide_window = []
-	print(f"Starting Window process")
+	print("Starting Window process")
 	curr_time = 0
 	while True:
 		try:

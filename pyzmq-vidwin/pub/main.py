@@ -96,8 +96,8 @@ def publisher(ip="0.0.0.0", port=5551):
     import time
     ctr = 1
 
-    video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4'
-    #video_path = '/data1/test2.mp4'
+    #video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4'
+    video_path = 'test2.mp4'
     iframes_list = get_i_frames(video_path)
     print('The iframe list***************', iframes_list)
     for frame in stream(video_path):
