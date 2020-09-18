@@ -28,8 +28,15 @@ def get_cpu():
         cpu = cpu + str(psutil.cpu_percent(interval=1))+' '
     return cpu
 
-def get_used_mem():
-    return psutil.virtual_memory()
+def get_cpu_percent():
+    cpu = psutil.cpu_percent(interval=1)
+    return cpu
+
+
+
+def get_used_mem_bytes():
+    return psutil.virtual_memory().used /(1024*1024)
+
 
 def get_used_mem_percentage():
     return psutil.virtual_memory().percent
@@ -146,7 +153,7 @@ def publisher(ip="0.0.0.0", port=5551):
         else:
             batch_input_queue.put([frame,ctr,0])
 
-        #print('CPU, Mem Use, Limit, MEM%: ',get_cpu(), get_used_mem(), get_available_memory(), get_used_mem_percentage())
+        print('CPU %, Mem Use, Limit, MEM%: ',get_cpu_percent(), get_used_mem_bytes(), get_available_memory())
 
         # fetch running container id
         # container_id = os.popen('head -1 /proc/self/cgroup|cut -d/ -f3').read()
@@ -159,16 +166,16 @@ def publisher(ip="0.0.0.0", port=5551):
         # f_system = open("/system_cpu/" + "/cpuacct.usage", "r")
         # system_stat = f_system.read().split()
         # print('System CPU Stat: ', system_stat)
-        calculateCPUPercent(cont_stat, system_stat, container_id)
+        #calculateCPUPercent(cont_stat, system_stat, container_id)
         #print('PSUTIL CPU USAGE****', get_cpu())
 
         #user_time = int(stat[1])
         #sys_time = int(stat[3])
 
-        f = open("/host_proc/uptime", "r")
-        host_uptime = f.read()
-        host_uptime = float(host_uptime.split()[0])
-        print('Host uptime*** ', host_uptime)
+        # f = open("/host_proc/uptime", "r")
+        # host_uptime = f.read()
+        # host_uptime = float(host_uptime.split()[0])
+        # print('Host uptime*** ', host_uptime)
 
         #container = os.popen('uptime').read()
         #print(container)
