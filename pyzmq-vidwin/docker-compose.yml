@@ -5,9 +5,6 @@ services:
     privileged: true
     runtime: nvidia
     image: subscriber:dev
-    build:
-      context: '.'
-      dockerfile: 'Dockerfile'
     tty: true
     command: [ "python3", "/app/main.py", "--ip", "0.0.0.0" ]
 
@@ -15,10 +12,12 @@ services:
     image: publisher:dev
     depends_on:
       - sub
-    build:
-      context: '.'
-      dockerfile: 'Dockerfile'
     tty: true
     command: [ "python3", "/app/main.py", "--ip", "sub" ]
     volumes:
-      - ./pub/:/app
+      - /home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/testhost:/app/video
+      - /sys/fs/cgroup/memory/docker:/mem/
+      - /sys/fs/cgroup/cpuacct/docker:/cpu/
+    mem_limit: 3000m
+    mem_reservation: 1000m
+    cpu_quota: 100000

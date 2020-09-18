@@ -18,8 +18,7 @@ ADD . /app
 #COPY window.py /app
 #COPY mobilenet_model.h5 /app
 
-RUN pip install -r requirements.txt -i https://pypi.org/simple && \
-    rm -rf /tmp/pip* /root/.cache
+RUN pip install -r requirements.txt -i https://pypi.org/simple
 
 #COPY main.py /app/main.py
 

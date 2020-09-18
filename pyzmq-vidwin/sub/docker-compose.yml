@@ -2,7 +2,6 @@ version: '2.3'
 services:
 
   sub:
-    privileged: true
     runtime: nvidia
     image: subscriber:dev
     build:

@@ -1,13 +1,13 @@
 from keras.preprocessing import image
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import keras
 from datetime import datetime
 import math
 from keras.models import load_model
 from keras.applications.resnet50 import ResNet50
 from keras.applications.vgg16 import VGG16
-from keras.applications.mobilenet import mobilenet
+from keras.applications import mobilenet
 from keras.applications.imagenet_utils import decode_predictions
 
 
@@ -59,7 +59,7 @@ def batch_prediciton(batch_holder,model):
   dt1 = datetime.now()
   #image = preprocess_input(batch_holder)
   pred = model.predict(batch_holder)
-  print('Predicted:', decode_predictions(pred, top=3))
+  print('Predicted:', decode_predictions_custom(pred, 3))
 
   # for k in range(0,batch_holder.shape[0]):
   #     #print(k)
@@ -72,14 +72,13 @@ def batch_prediciton(batch_holder,model):
 
 
 # decode predictions
-# def decode_predictions(pred,k):
-#     class_labels = ['car','person']
-#     #for top-k score
-#     index = pred.argsort()[-2:][::-1]
-#
-#     #print("Prdicted label for Image: ", k)
-#     # for i in range(index[0].shape[0]):
-#     #     print(class_labels[index[0][i]], " : ", pred[0][index[0][i]])
+def decode_predictions_custom(pred,k):
+    class_labels = ['car','person']
+    #for top-k score
+    index = pred.argsort()[-2:][::-1]
+    print("Prdicted label for Image: ", k)
+    for i in range(index[0].shape[0]):
+        print(class_labels[index[0][i]], " : ", pred[0][index[0][i]])
 
 
 

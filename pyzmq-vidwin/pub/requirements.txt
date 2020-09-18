@@ -2,3 +2,4 @@ pyzmq
 psutil
 opencv-contrib-python-headless
 ffmpeg
+docker
