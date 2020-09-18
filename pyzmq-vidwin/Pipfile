@@ -1,0 +1,17 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+
+[packages]
+pyzmq = "==18.0.0"
+psutil = "*"
+opencv-contrib-python-headless = "*"
+ffmpeg = "*"
+docker= "*"
+
+[requires]
+python_version = "3.6"
