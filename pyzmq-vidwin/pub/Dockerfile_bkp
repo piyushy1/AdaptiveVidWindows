@@ -1,0 +1,27 @@
+#pub
+#FROM python:3.7.1-slim
+
+#FROM jjanzic/docker-python3-opencv
+FROM borda/docker_python-opencv-ffmpeg
+
+MAINTAINER Piyush Yadav
+
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+  gcc
+
+
+WORKDIR /app
+COPY requirements.txt  /app
+COPY window.py /app
+COPY videostreamer.py /app
+COPY probe.py /app
+RUN pip3 install -r requirements.txt
+
+COPY main.py /app/main.py
+
+# when using docker-compose, this command can be overwritten
+# Change "yo.ur.i.p" to your machine IP (something similar to: "192.168.99.1") when using `docker run `
+CMD ["python3", "main.py", "--ip", "172.17.0.1"]
+#CMD ["python", "main.py", "--ip", "0.0.0.0"]
+#CMD ["python", "main.py", "--ip", "172.17.255.255"]
