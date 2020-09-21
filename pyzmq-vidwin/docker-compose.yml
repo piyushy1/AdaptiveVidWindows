@@ -17,7 +17,7 @@ services:
     volumes:
       - /home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/testhost:/app/video
       - /sys/fs/cgroup/memory/docker:/mem/
-      - /sys/fs/cgroup/cpuacct/docker:/cpu/
+      - /home/dhaval/piyush/ViIDWIN/Code/pyzmq-vidwin/stats:/docker_stats/
     mem_limit: 3000m
     mem_reservation: 1000m
-    cpu_quota: 100000
+    cpuset: 0-0

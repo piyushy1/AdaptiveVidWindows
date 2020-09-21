@@ -13,11 +13,10 @@ services:
       - /home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/testhost:/app/video
       #- /var/run/docker.sock:/var/run/docker.sock
       - /sys/fs/cgroup/memory/docker:/mem/
-      - /sys/fs/cgroup/cpu,cpuacct/docker:/cpu/
-      - /sys/fs/cgroup/pids/docker/:/pids/
-      - /sys/fs/cgroup/devices/docker/:/device/
-      - /proc:/host_proc/
-      - /sys/fs/cgroup/cpu,cpuacct:/system_cpu/
+      #- /sys/fs/cgroup/cpu,cpuacct/docker:/cpu/
+      #- /sys/fs/cgroup/cpu,cpuacct:/system_cpu/
+      #- /proc:/host_proc/
+      - /home/dhaval/piyush/ViIDWIN/Code/pyzmq-vidwin/stats:/docker_stats/
     mem_limit: 3000m
     mem_reservation: 1000m
-    cpuset: 0-1
+    cpuset: 0-0

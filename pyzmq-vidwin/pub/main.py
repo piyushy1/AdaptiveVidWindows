@@ -6,6 +6,7 @@ import zmq
 import time
 import queue
 import psutil
+import json
 import argparse
 import datetime
 import numpy as np
@@ -14,13 +15,11 @@ from window import sliding
 from probe import get_i_frames
 from videostreamer import stream
 from multiprocessing import Process, Queue
-import docker
+
 # os.system('hostname -I')
 
-def get_docker_stats():
-    client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
-    for i in client.containers.list():
-        print(i.stats(stream=False))
+## PSUTIL functions#########################
+# Note: psutil fxn dont work inside docker container....the below fxns are kept for future ref.
 
 def get_cpu():
     cpu = ''
@@ -33,10 +32,8 @@ def get_cpu_percent():
     return cpu
 
 
-
 def get_used_mem_bytes():
     return psutil.virtual_memory().used /(1024*1024)
-
 
 def get_used_mem_percentage():
     return psutil.virtual_memory().percent
@@ -44,20 +41,35 @@ def get_used_mem_percentage():
 def get_available_memory():
     return psutil.virtual_memory().available * 100 / psutil.virtual_memory().total
 
-def calculateCPUPercent(previousCPU, previousSystem, container_id):
-    cpuPercent = 0
-    f_container = open("/cpu/" + container_id.rstrip() + "/cpuacct.usage", "r")
-    cont_stat = f_container.read().split()
-
-    f_system = open("/system_cpu/" + "/cpuacct.usage", "r")
-    system_stat = f_system.read().split()
-    cpuDelta = int(cont_stat[0])-int(previousCPU[0])
-    systemDelta = int(system_stat[0])- int(previousSystem[0])
-    if systemDelta > 0.0 and cpuDelta > 0.0 :
-        cpuPercent = (cpuDelta / systemDelta) * 2 * 100.0
-        print('*******CPU_PERCENT_USAGE************', cpuPercent)
+#################################################################################
 
 
+def calculate_container_CPU_Percent():
+    # fetch running container id
+    container_id = os.popen('head -1 /proc/self/cgroup|cut -d/ -f3').read()
+    try:
+        f = open("/docker_stats/" + container_id.rstrip() + '.json', "r")
+        data = json.loads(f.read())
+        cpuDelta = data['cpu_stats']['cpu_usage']['total_usage'] - data['precpu_stats']['cpu_usage']['total_usage']
+        systemDelta = data['cpu_stats']['system_cpu_usage'] - data['precpu_stats']['system_cpu_usage']
+        if systemDelta > 0.0 and cpuDelta > 0.0:
+            cpuPercent = (cpuDelta / systemDelta) * float(len(data['cpu_stats']['cpu_usage']['percpu_usage'])) * 100.0
+            print('CPU Usage ==> ' + str(cpuPercent) + ' %')
+    except Exception as e:
+        # print(str(e))
+        print('File not created yet. Retrying...')
+
+
+def calculate_container_memory():
+    # fetch running container id
+    container_id = os.popen('head -1 /proc/self/cgroup|cut -d/ -f3').read()
+    try:
+        f = open("/mem/" + container_id.rstrip() + "/memory.usage_in_bytes", "r")
+        print("MEM USAGE ==> " + str(int(f.read()) / (1024 * 1024)) + " MB")
+        f = open("/mem/" + container_id.rstrip() + "/memory.limit_in_bytes", "r")
+        print("MEM LIMIT ==> " + str(int(f.read()) / (1024 * 1024)) + " MB")
+    except Exception as e:
+        print('container id not found.....')
 
 
 def socket_send(frame, socket):
@@ -72,9 +84,6 @@ def socket_send_window(q, url):
     ctx = zmq.Context()
     socket = ctx.socket(zmq.PAIR)
     socket.connect(url)
-    # print('sendin..')
-    # socket.send_string("omg here")
-    # socket.send_string("omg here")
 
     while True:
         # print('sended..')
@@ -126,84 +135,25 @@ def publisher(ip="0.0.0.0", port=5551):
     socket_send_window_process.start()
     # time.sleep(5)
 
-
     wind = []
     import time
     ctr = 1
 
-    #video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4'
     video_path = '/app/video/test2.mp4'
     iframes_list = get_i_frames(video_path)
     print('The iframe list***************', iframes_list)
 
-    container_id = os.popen('head -1 /proc/self/cgroup|cut -d/ -f3').read()
-    print(container_id.rstrip())
-
-    f_container = open("/cpu/" + container_id.rstrip() + "/cpuacct.usage", "r")
-    cont_stat = f_container.read().split()
-    print('Container CPU Stat: ', cont_stat)
-
-    f_system = open("/system_cpu/" + "/cpuacct.usage", "r")
-    system_stat = f_system.read().split()
-    print('System CPU Stat: ', system_stat)
-
     for frame in stream(video_path):
+
         if ctr in iframes_list:
             batch_input_queue.put([frame,ctr,1])  # an iframe
         else:
             batch_input_queue.put([frame,ctr,0])
 
-        print('CPU %, Mem Use, Limit, MEM%: ',get_cpu_percent(), get_used_mem_bytes(), get_available_memory())
+        calculate_container_CPU_Percent()
+        calculate_container_memory()
 
-        # fetch running container id
-        # container_id = os.popen('head -1 /proc/self/cgroup|cut -d/ -f3').read()
-        # print(container_id.rstrip())
-        #
-        # f_container = open("/cpu/" + container_id.rstrip() + "/cpuacct.usage", "r")
-        # cont_stat = f_container.read().split()
-        # print('Container CPU Stat: ', cont_stat)
-        #
-        # f_system = open("/system_cpu/" + "/cpuacct.usage", "r")
-        # system_stat = f_system.read().split()
-        # print('System CPU Stat: ', system_stat)
-        #calculateCPUPercent(cont_stat, system_stat, container_id)
-        #print('PSUTIL CPU USAGE****', get_cpu())
 
-        #user_time = int(stat[1])
-        #sys_time = int(stat[3])
-
-        # f = open("/host_proc/uptime", "r")
-        # host_uptime = f.read()
-        # host_uptime = float(host_uptime.split()[0])
-        # print('Host uptime*** ', host_uptime)
-
-        #container = os.popen('uptime').read()
-        #print(container)
-
-        #pid = open("/device/73c7549c9bbd8743b527471031c87e1e11d2bea4d73c059cfe49ec97abe91b99/cgroup.procs", "r")
-        #print(pid.read())
-
-        #f = open("/mem/" + container_id.rstrip() + "/cgroup.procs", "r")
-        #print(f.read())
-        #container_uptime = int(procs_id.split()[0])
-        #print(container_uptime)
-        #f = open("/host_proc/28808/stat", "r")
-        #container_uptime = f.read()
-        #container_uptime = int(container_uptime.split()[21])
-        #print(container_uptime)
-        #print(container_uptime)
-
-        #cpu_usage = 100 * (((user_time + sys_time)/100) / (host_uptime - container_uptime))
-        #print("CPU USAGE: " + str(cpu_usage) + " %")
-
-        f = open("/mem/"+ container_id.rstrip()+"/memory.usage_in_bytes", "r")
-        print("MEM USAGE: " + str(int(f.read())/(1024*1024))+" MB")
-        f = open("/mem/" + container_id.rstrip() + "/memory.limit_in_bytes", "r")
-        print("MEM LIMIT: " + str(int(f.read())/(1024*1024))+" MB")
-        # f = open("/cpu/" + container_id.rstrip() + "/cpuacct.usage_percpu", "r")
-        # stat = f.read().split()
-        # print('CPU Statics****: ', stat)
-        # print('Docker Stats: ', get_docker_stats())
         ctr += 1
         #time.sleep(0.1)
 

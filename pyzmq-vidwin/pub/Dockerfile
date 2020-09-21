@@ -10,15 +10,16 @@ RUN apt-get update && \
   apt-get install -y --no-install-recommends \
   gcc
 
-
 WORKDIR /app
-ADD . /app
+COPY requirements.txt /app
+
 #COPY requirements.txt /app
 #COPY dnnmodel.py /app
 #COPY window.py /app
 #COPY mobilenet_model.h5 /app
 
 RUN pip install -r requirements.txt -i https://pypi.org/simple
+ADD . /app
 
 #COPY main.py /app/main.py
 

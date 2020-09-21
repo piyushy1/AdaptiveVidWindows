@@ -11,15 +11,11 @@ RUN apt-get update && \
 RUN pip install -U pip==${PIP_VERSION_TO_INSTALL}
 
 WORKDIR /app
+COPY requirements.txt /app
+
+RUN pip install -r requirements.txt -i https://pypi.org/simple
+
 ADD . /app
-#COPY requirements.txt /app
-#COPY dnnmodel.py /app
-#COPY window.py /app
-#COPY mobilenet_model.h5 /app
-
-RUN pip install -r requirements.txt -i https://pypi.org/simple && \
-    rm -rf /tmp/pip* /root/.cache
-
 #COPY main.py /app/main.py
 
 # allow other containers/PCs to connect; maybe not necessary

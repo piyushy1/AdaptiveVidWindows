@@ -3,3 +3,4 @@ psutil
 opencv-contrib-python-headless
 ffmpeg
 docker
+glances
