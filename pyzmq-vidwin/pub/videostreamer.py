@@ -54,7 +54,7 @@ def stream(video_path):
         # )
         # socket.send_json(md)
         # socket.send(frame)
-        # for resizing the frame...
+        # frame resizing the frame...
         frame = cv2.resize(frame, (224, 224))
         yield frame
         print(f'Frame count = {frame_count}')
