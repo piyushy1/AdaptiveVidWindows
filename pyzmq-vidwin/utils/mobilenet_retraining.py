@@ -1,5 +1,8 @@
+# Author - Piyush Yadav
+# Insight Centre for Data Analytics
+# Package- VidWIN Project
+
 import tensorflow.keras as k
-from cv2.cv2 import cuda_GpuMat_Allocator
 from tensorflow.keras.optimizers import Adam, SGD
 from tensorflow.keras.metrics import categorical_crossentropy
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
