@@ -15,6 +15,7 @@ from tensorflow.keras.preprocessing import image
 import numpy as np
 import cv2
 from PIL import Image
+import matplotlib.pyplot as plt
 
 
 # method to print the divisors
@@ -70,9 +71,9 @@ def decode_predictions(pred,k):
     index = pred[0].argsort()[-k:][::-1]
     #print('Index', index)
 
-    print("Prdicted label for Image: ", k)
+    #print("Prdicted label for Image: ", k)
     for i in range(0,k):
-        predict_list.append((class_labels[index[i]],pred[0][index[i]]))
+        predict_list.append({class_labels[index[i]]: pred[0][index[i]]})
         #print(class_labels[index[i]], " : ", pred[0][index[i]])
 
     return predict_list
@@ -86,16 +87,62 @@ def process_image(resolution_list, image_directory, image_files, model):
             img = prepare_cv_image_2_keras_image(img, resolution)
             pred = model.predict(img)
 
-def calculate_top_k_accuracy():
-    print()
+def calculate_top_k_accuracy(acc_value):
+    top1 =[]
+    top2= []
+    top3 = []
+    top4 =[]
+    top5 = []
+    for data in acc_value:
+        for key, value in data.items():
+            if any('car' in d for d in value[:1]):
+                top1.append(1)
+            if any('car' in d for d in value[:2]):
+                top2.append(1)
+            if any('car' in d for d in value[:3]):
+                top3.append(1)
+            if any('car' in d for d in value[:4]):
+                top4.append(1)
+            if any('car' in d for d in value[:5]):
+                top5.append(1)
+
+    top1_accurcacy = len(top1)/len(acc_value)
+    top2_accurcacy = len(top2) / len(acc_value)
+    top3_accurcacy = len(top3) / len(acc_value)
+    top4_accurcacy = len(top4) / len(acc_value)
+    top5_accurcacy = len(top5) / len(acc_value)
+
+    return top1_accurcacy, top2_accurcacy, top3_accurcacy, top4_accurcacy, top5_accurcacy
 
 
-
+# function to plot live graph
 def plot_accuracy(final_resolution):
+    batch_x_ticks_res = []
+    top_1 =[]
+    top_2 =[]
+    top_3 =[]
+    top_4= []
+    top_5= []
     for data in final_resolution:
+        for key, value in data.items():
+            batch_x_ticks_res.append(str(key))
+            a,b,c,d,e = calculate_top_k_accuracy(value)
+            top_1.append(a)
+            top_2.append(b)
+            top_3.append(c)
+            top_4.append(d)
+            top_5.append(e)
 
-
-
+    fig = plt.figure()
+    #t_y = np.array([1,5,10,20,30,40,50,60,70,80,90,100])
+    t_y = np.array(batch_x_ticks_res)
+    plt.plot(t_y, top_1, 'r^--',t_y, top_2, 'mD-',t_y, top_3, '#92D050',t_y, top_4, 'bo--',t_y, top_4, 'b^--')
+    plt.legend(['top-1','top-2', 'top-3' , 'top-4', 'top-5'], loc='lower right',prop={'size':10},labelspacing=0.2)
+    plt.xlabel('Resolution')
+    plt.ylabel('Accuracy (%)')
+    plt.xticks(batch_x_ticks_res)
+    #plt.savefig('throughput6.svg', format='svg', dpi=1000,bbox_inches='tight')
+    plt.show()
 
 def process_video(resolution_list, video_path, model):
     final_resolution =[]
@@ -121,17 +168,19 @@ def process_video(resolution_list, video_path, model):
             #print(pred)
             i = i+1
 
+    plot_accuracy(final_resolution)
+
 
 
 # set the video path
-video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2/test3.mp4'
+video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2/Jacksonhole9804.mp4'
 
 # image directory path
 image_directory = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/voc_validation/car/'
 # get the list of the image files
 image_files = read_image_directory(image_directory)
 # the get the list of the resolution
-resolution_list= get_resolution_set(16,9, (1920,1080))
+resolution_list= get_resolution_set(320,180, (1920,1080))
 #load model
 model = load_model('mobilenet_model_voc_20class_ep_50_sgd.h5')
 
