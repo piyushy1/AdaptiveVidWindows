@@ -37,20 +37,29 @@ def prepare_image(file):
 
 base_model=MobileNet(weights='imagenet',include_top=False) #imports the mobilenet model
 
+layer_name = 'conv_dw_12_relu'
+# intermediate_layer_model = Model(inputs=base_model.input,
+#                                        outputs=base_model.get_layer(layer_name).output)
+
 # add a global spatial average pooling layer
-x = base_model.output
+#x = base_model.output
+x = base_model.get_layer(layer_name).output
 x = GlobalAveragePooling2D()(x)
 # let's add a fully-connected layer
 x=Dense(1024,activation='relu')(x) #we add dense layers so that the model can learn more complex functions and classify for better results.
 x=Dense(1024,activation='relu')(x) #dense layer 2
 x=Dense(512,activation='relu')(x) #dense layer 3
 # and a logistic layer -- let's say we have 20 voc classes
-preds = Dense(20, activation='softmax')(x)
+preds = Dense(2, activation='softmax')(x)
 
 model=Model(inputs=base_model.input,outputs=preds) ##now a model has been created based on our architecture
 
-# for i,layer in enumerate(model.layers):
-#     print(i, layer.name)
+for i,layer in enumerate(model.layers):
+    print('Final Model*****', i, layer.name)
+
+
+for i,layer in enumerate(base_model.layers):
+    print('Original Model*****', i, layer.name)
 
 # first: train only the top layers (which were randomly initialized)
 # i.e. freeze all convolutional InceptionV3 layers
@@ -62,8 +71,9 @@ for layer in base_model.layers:
 #    layer.trainable = False
 # for layer in model.layers[20:]:
 #    layer.trainable = True
+
+#opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False, name='SGD')
 model.compile(optimizer= SGD(learning_rate=0.01, momentum=0.0, nesterov=False, name='SGD'),loss='categorical_crossentropy',metrics=['accuracy'])
-#model.compile(optimizer='Adam',loss='categorical_crossentropy',metrics=['accuracy'])
 # Adam optimizer
 # loss function will be categorical cross entropy
 # evaluation metric will be accuracy
@@ -95,19 +105,11 @@ tensorboard = TensorBoard(log_dir="logs/{}".format(time()), update_freq='epoch',
 model.fit(
         train_generator,
         steps_per_epoch=step_size_train,
-        epochs=50,
+        epochs=30,
         validation_data=validation_generator,
         validation_steps=step_size_val,
     callbacks= [tensorboard])
 
 #model.fit(train_generator,steps_per_epoch=step_size_train,epochs=12)
 
-model.save('mobilenet_model_voc_20class_ep_50_sgd.h5')
-
-
-
-
-
-
-
-
+model.save('mobilenet_model_voc_20class_ep_30_sgd.h5')

@@ -60,33 +60,71 @@ def prepare_cv_image_2_keras_image (img, resolution):
     image_array_expanded = np.expand_dims(img_array, axis = 0)
     return preprocess_input(image_array_expanded)
 
+# decode predictions
+def decode_predictions(pred,k):
+    predict_list =[]
+    class_labels = ['aeroplane','bicycle','bird','boat','bottle','bus','car','cat','chair','cow','diningtable','dog','horse','motorbike','person','pottedplant','sheep','sofa','train','tvmonitor']
+    #for top-k score
+    # index1= pred[0].argsort()[::-1][: k]
+    # print('Index1',index1)
+    index = pred[0].argsort()[-k:][::-1]
+    #print('Index', index)
+
+    print("Prdicted label for Image: ", k)
+    for i in range(0,k):
+        predict_list.append((class_labels[index[i]],pred[0][index[i]]))
+        #print(class_labels[index[i]], " : ", pred[0][index[i]])
+
+    return predict_list
+
 def process_image(resolution_list, image_directory, image_files, model):
     for resolution in resolution_list:
         print('RESOLUTION ****', resolution)
         for img in image_files:
             #img = prepare_cv_image_2_keras_image(img, resolution)
-            img = prepare_cv_image_2_keras_image(image_directory+img,resolution)
+            img = cv2.imread(image_directory+img)
+            img = prepare_cv_image_2_keras_image(img, resolution)
             pred = model.predict(img)
-            print(pred)
+
+def calculate_top_k_accuracy():
+    print()
+
+
+
+def plot_accuracy(final_resolution):
+    for data in final_resolution:
+
+
+
 
 def process_video(resolution_list, video_path, model):
+    final_resolution =[]
     for resolution in resolution_list:
+        all_predictions = []
         print('RESOLUTION ****', resolution)
         cap = cv2.VideoCapture(video_path)
         # get frame dimension
         width = cap.get(3)  # float
         height = cap.get(4)  # float
+        i = 0
         while True:
             ret, frame = cap.read()
             if not ret:
+                final_resolution.append({resolution: all_predictions})
+                print('OK')
                 break
             img = prepare_cv_image_2_keras_image(frame,resolution)
             pred = model.predict(img)
-            print(pred)
+            predictions = decode_predictions(pred,5)
+            dict_predict = {i: predictions}
+            all_predictions.append(dict_predict)
+            #print(pred)
+            i = i+1
+
 
 
 # set the video path
-video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2/Jacksonhole9804.mp4'
+video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2/test3.mp4'
 
 # image directory path
 image_directory = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/voc_validation/car/'
@@ -95,7 +133,7 @@ image_files = read_image_directory(image_directory)
 # the get the list of the resolution
 resolution_list= get_resolution_set(16,9, (1920,1080))
 #load model
-model = load_model('mobilenet_model_voc.h5')
+model = load_model('mobilenet_model_voc_20class_ep_50_sgd.h5')
 
 #process_image(resolution_list, image_directory,image_files, model)
 process_video(resolution_list, video_path, model)
