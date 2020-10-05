@@ -64,12 +64,23 @@ def calculate_container_memory():
     # fetch running container id
     container_id = os.popen('head -1 /proc/self/cgroup|cut -d/ -f3').read()
     try:
+        mem_percent = []
         f = open("/mem/" + container_id.rstrip() + "/memory.usage_in_bytes", "r")
-        print("MEM USAGE ==> " + str(int(f.read()) / (1024 * 1024)) + " MB")
-        f = open("/mem/" + container_id.rstrip() + "/memory.limit_in_bytes", "r")
-        print("MEM LIMIT ==> " + str(int(f.read()) / (1024 * 1024)) + " MB")
+        with open("/mem/" + container_id.rstrip() + "/memory.usage_in_bytes", 'r') as infile:
+            mem_usage =float(infile.read()) / (1024 * 1024) # mem in MB
+            mem_percent.append(mem_usage)
+            print('MEM USAGE', mem_usage)
+
+        with open("/mem/" + container_id.rstrip() + "/memory.limit_in_bytes", 'r') as infile:
+            mem_limit = float(infile.read())/(1024 * 1024) # max memory limit of container
+            mem_percent.append(mem_limit)
+            print('MEM LIMIT', mem_limit)
+
+        mem_usage_percent = (mem_percent[0]/mem_percent[1])*100
+        print('MEM PERCENT %', mem_usage_percent)
+
     except Exception as e:
-        print('container id not found.....')
+        print('container id not found.....'+str(e))
 
 
 def socket_send(frame, socket):
@@ -138,7 +149,7 @@ def publisher(ip="0.0.0.0", port=5551):
     wind = []
     import time
     ctr = 1
-
+    #video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4'
     video_path = '/app/video/test2.mp4'
     iframes_list = get_i_frames(video_path)
     print('The iframe list***************', iframes_list)
