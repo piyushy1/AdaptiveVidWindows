@@ -35,81 +35,89 @@ def prepare_image(file):
 # print(results)
 
 
-base_model=MobileNet(weights='imagenet',include_top=False) #imports the mobilenet model
+def create_lightweight_mobilenet(layer_name, number):
+    base_model=MobileNet(weights='imagenet',include_top=False) #imports the mobilenet model
 
-layer_name = 'conv_dw_12_relu'
-# intermediate_layer_model = Model(inputs=base_model.input,
-#                                        outputs=base_model.get_layer(layer_name).output)
+    #layer_name = 'conv_dw_12_relu'
+    # intermediate_layer_model = Model(inputs=base_model.input,
+    #                                        outputs=base_model.get_layer(layer_name).output)
 
-# add a global spatial average pooling layer
-#x = base_model.output
-x = base_model.get_layer(layer_name).output
-x = GlobalAveragePooling2D()(x)
-# let's add a fully-connected layer
-x=Dense(1024,activation='relu')(x) #we add dense layers so that the model can learn more complex functions and classify for better results.
-x=Dense(1024,activation='relu')(x) #dense layer 2
-x=Dense(512,activation='relu')(x) #dense layer 3
-# and a logistic layer -- let's say we have 20 voc classes
-preds = Dense(2, activation='softmax')(x)
+    # add a global spatial average pooling layer
+    #x = base_model.output
+    x = base_model.get_layer(layer_name).output
+    x = GlobalAveragePooling2D()(x)
+    # let's add a fully-connected layer
+    x=Dense(1024,activation='relu')(x) #we add dense layers so that the model can learn more complex functions and classify for better results.
+    x=Dense(1024,activation='relu')(x) #dense layer 2
+    x=Dense(512,activation='relu')(x) #dense layer 3
+    # and a logistic layer -- let's say we have 20 voc classes
+    preds = Dense(2, activation='softmax')(x)
 
-model=Model(inputs=base_model.input,outputs=preds) ##now a model has been created based on our architecture
+    model=Model(inputs=base_model.input,outputs=preds) ##now a model has been created based on our architecture
 
-for i,layer in enumerate(model.layers):
-    print('Final Model*****', i, layer.name)
+    # for i,layer in enumerate(model.layers):
+    #     print('Final Model*****', i, layer.name)
+    #     print(len(model.layers))
 
 
-for i,layer in enumerate(base_model.layers):
-    print('Original Model*****', i, layer.name)
+    # for i,layer in enumerate(base_model.layers):
+    #     print('Original Model*****', i, layer.name)
 
-# first: train only the top layers (which were randomly initialized)
-# i.e. freeze all convolutional InceptionV3 layers
-for layer in base_model.layers:
-    layer.trainable = False
+    # first: train only the top layers (which were randomly initialized)
+    # i.e. freeze all convolutional InceptionV3 layers
+    for layer in base_model.layers:
+        layer.trainable = False
 
-# the first 249 layers and unfreeze the rest:
-# for layer in model.layers[:20]:
-#    layer.trainable = False
-# for layer in model.layers[20:]:
-#    layer.trainable = True
+    # the first 249 layers and unfreeze the rest:
+    # for layer in model.layers[:20]:
+    #    layer.trainable = False
+    # for layer in model.layers[20:]:
+    #    layer.trainable = True
 
-#opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False, name='SGD')
-model.compile(optimizer= SGD(learning_rate=0.01, momentum=0.0, nesterov=False, name='SGD'),loss='categorical_crossentropy',metrics=['accuracy'])
-# Adam optimizer
-# loss function will be categorical cross entropy
-# evaluation metric will be accuracy
+    #opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False, name='SGD')
+    model.compile(optimizer= SGD(learning_rate=0.01, momentum=0.0, nesterov=False, name='SGD'),loss='categorical_crossentropy',metrics=['accuracy'])
+    # Adam optimizer
+    # loss function will be categorical cross entropy
+    # evaluation metric will be accuracy
 
-# call the dataset
+    # call the dataset
 
-train_datagen=ImageDataGenerator(preprocessing_function=preprocess_input) #included in our dependencies
+    train_datagen=ImageDataGenerator(preprocessing_function=preprocess_input) #included in our dependencies
 
-train_generator=train_datagen.flow_from_directory('/home/dhaval/piyush/Usecases_dataset/voc_dataset_created/training_data',
-                                                 target_size=(224,224),
-                                                 color_mode='rgb',
-                                                 batch_size=32,
-                                                 class_mode='categorical',
-                                                 shuffle=True)
+    train_generator=train_datagen.flow_from_directory('/home/dhaval/piyush/Usecases_dataset/voc_dataset_created/training_data',
+                                                     target_size=(224,224),
+                                                     color_mode='rgb',
+                                                     batch_size=32,
+                                                     class_mode='categorical',
+                                                     shuffle=True)
 
-validation_generator=train_datagen.flow_from_directory('/home/dhaval/piyush/Usecases_dataset/voc_dataset_created/validation_data',
-                                                 target_size=(224,224),
-                                                 color_mode='rgb',
-                                                 batch_size=32,
-                                                 class_mode='categorical',
-                                                 shuffle=True)
+    validation_generator=train_datagen.flow_from_directory('/home/dhaval/piyush/Usecases_dataset/voc_dataset_created/validation_data',
+                                                     target_size=(224,224),
+                                                     color_mode='rgb',
+                                                     batch_size=32,
+                                                     class_mode='categorical',
+                                                     shuffle=True)
 
-step_size_train=train_generator.n//train_generator.batch_size
-step_size_val=validation_generator.n//validation_generator.batch_size
+    step_size_train=train_generator.n//train_generator.batch_size
+    step_size_val=validation_generator.n//validation_generator.batch_size
 
-tensorboard = TensorBoard(log_dir="logs/{}".format(time()), update_freq='epoch',profile_batch=0)
+    tensorboard = TensorBoard(log_dir="logs/{}".format(time()), update_freq='epoch',profile_batch=0)
 
-#fit the model
-model.fit(
-        train_generator,
-        steps_per_epoch=step_size_train,
-        epochs=30,
-        validation_data=validation_generator,
-        validation_steps=step_size_val,
-    callbacks= [tensorboard])
+    #fit the model
+    model.fit(
+            train_generator,
+            steps_per_epoch=step_size_train,
+            epochs=40,
+            validation_data=validation_generator,
+            validation_steps=step_size_val,
+        callbacks= [tensorboard])
 
-#model.fit(train_generator,steps_per_epoch=step_size_train,epochs=12)
+    #model.fit(train_generator,steps_per_epoch=step_size_train,epochs=12)
 
-model.save('mobilenet_model_voc_20class_ep_30_sgd.h5')
+    model.save('mobilenet_model_voc_20class_ep_40_sgd_layer_'+str(len(model.layers))+'.h5')
+
+layer = ['12','10','8','6','4']
+for number in layer:
+    layer_name = 'conv_dw_'+number+'_relu'
+    print(layer_name)
+    create_lightweight_mobilenet(layer_name, number)
