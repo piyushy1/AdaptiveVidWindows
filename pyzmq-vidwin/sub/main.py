@@ -3,7 +3,7 @@
 import os
 import zmq
 import time
-#import queue
+import queue
 import argparse
 import datetime
 import pickle as pk
@@ -39,15 +39,31 @@ def block(inp_q):
         print(e)
 
 
-latency =[]
-def measure_latency(batch,time):
+
+def measure_batch_transmission_latency(batch,time):
     # only transmission latency
-    latency.append((time-batch[-1][2]).total_seconds()*1000)
+    trans_latency = (time-batch[-1][3]).total_seconds()*1000
+    batch_plus_transmission_latency = (time-batch[0][3]).total_seconds()*1000
+    return trans_latency, batch_plus_transmission_latency
 
 
-    # avg latency of batch plus transmission
-    # for i in batch:
-    #     latency.append((time-i[2]).total_seconds()*1000)
+def get_avg_edge_cpu_usage_batch(batch):
+    cpu_usage = []
+    for frame in batch:
+        cpu_usage.append(frame[4])
+
+    avgcpu = sum(cpu_usage)/ len(cpu_usage)
+    return avgcpu
+
+
+def get_avg_mem_usage_batch(batch):
+    mem_usage = []
+    for frame in batch:
+        mem_usage.append(frame[5])
+
+    avgmem = sum(mem_usage) / len(mem_usage)
+    return avgmem
+
 
 packs = []
 
@@ -85,12 +101,13 @@ def subscriber(ip="172.17.0.1", port=5551):
     while True:
         msg = socket.recv()
         A = pk.loads(msg)
-        # measure_latency(A,datetime.datetime.now())
-        # implement DNN Models
+
         if len(A) !=0:
-            batch_time = batch_of_images(A,model)
-            print('The batch time is: ',rc, len(A), batch_time)
-            print('OK')
+            trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(A, datetime.datetime.now())
+            batch_latency = batch_of_images(A,model)
+            avg_cpu = get_avg_edge_cpu_usage_batch(A)
+            avg_mem = get_avg_mem_usage_batch(A)
+            print('The batch time is: ',rc, len(A), batch_latency)
 
         for i in A:
             if i[2] == 1:
