@@ -12,7 +12,7 @@ from multiprocessing import Process, Queue
 import numpy
 from dnnmodel import load_DNN_model
 from dnnmodel import batch_of_images
-
+import csv
 
 # os.system('hostname -I')
 
@@ -38,6 +38,25 @@ def block(inp_q):
     except Exception as e:
         print(e)
 
+
+def dnn_input(inp_q, out_q):
+    # load the DNN Model
+    #model = load_DNN_model('mobilenet_custom')
+    model = load_DNN_model('InceptionResNet50')
+    try:
+        while True:
+            try:
+                frame_batch = inp_q.get(timeout=0.1)
+                #print('ok')
+                #out_q.put(frame_batch)
+                batch_process_time, pred = batch_of_images(frame_batch, model)
+                for processed_frame in pred:
+                    out_q.put(processed_frame)
+
+            except queue.Empty:
+                pass
+    except Exception as e:
+        print(e)
 
 
 def measure_batch_transmission_latency(batch,time):
@@ -65,6 +84,28 @@ def get_avg_mem_usage_batch(batch):
     return avgmem
 
 
+def get_metrics(rc, A, model):
+    data = []
+    if rc == 0:
+        throughput_time = (A[0][3]-datetime.datetime.utcfromtimestamp(0)).total_seconds() * 1000.0
+        trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(A, datetime.datetime.now())
+        dnn_batch_latency = batch_of_images(A, model)
+        avg_cpu = get_avg_edge_cpu_usage_batch(A)
+        avg_mem = get_avg_mem_usage_batch(A)
+        data.extend([rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem, throughput_time])
+    else:
+        trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(A, datetime.datetime.now())
+        dnn_batch_latency = batch_of_images(A, model)
+        avg_cpu = get_avg_edge_cpu_usage_batch(A)
+        avg_mem = get_avg_mem_usage_batch(A)
+        throughput_time = (datetime.datetime.now()-datetime.datetime.utcfromtimestamp(0)).total_seconds() * 1000.0
+        data.extend([rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem, throughput_time])
+
+    with open('batch_data.csv', mode='a') as batch_data:
+        batch_writer = csv.writer(batch_data, delimiter=',')
+        batch_writer.writerow(data)
+
+
 packs = []
 
 def subscriber(ip="172.17.0.1", port=5551):
@@ -84,35 +125,38 @@ def subscriber(ip="172.17.0.1", port=5551):
 
     print("Sub bound to: {}\nWaiting for data...".format(url))
 
+    #model = load_DNN_model('InceptionResNet50')
+
     rc = 1
     
+    dnn_input_queue = Queue()
     sliding_window_input_queue = Queue()
     sliding_window_output_queue = Queue()
+    dnn_input_queue_process = Process(name='DNN',target=dnn_input, args=(dnn_input_queue,sliding_window_input_queue,))
     sliding_process = Process(name='Slider',target=sliding, args=(sliding_window_input_queue, sliding_window_output_queue,5,2,))
+    dnn_input_queue_process.start()
     sliding_process.start()
 
     # block_process_input_queue = Queue()
     block_process = Process(name='Blocker', target=block, args=(sliding_window_output_queue,))
     block_process.start()
 
-    # load the DNN Model
-    model = load_DNN_model('mobilenet_custom')
 
     while True:
         msg = socket.recv()
         A = pk.loads(msg)
 
         if len(A) !=0:
-            trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(A, datetime.datetime.now())
-            batch_latency = batch_of_images(A,model)
-            avg_cpu = get_avg_edge_cpu_usage_batch(A)
-            avg_mem = get_avg_mem_usage_batch(A)
-            print('The batch time is: ',rc, len(A), batch_latency)
+            #print(A)
+            dnn_input_queue.put(A)
 
-        for i in A:
-            if i[2] == 1:
-                print("i frame received")
-            sliding_window_input_queue.put(i)
+        # if len(A) !=0:
+        #     get_metrics(rc, A, model)
+        #
+        # for i in A:
+        #     if i[2] == 1:
+        #         print("i frame received")
+        #     sliding_window_input_queue.put(i)
 
         #print(f'Receive count = {rc}')
         print('Recieve Count:',rc)
