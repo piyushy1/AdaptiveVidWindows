@@ -49,33 +49,42 @@ def load_DNN_model(model_name):
 def batch_of_images(frame_list, model):
     #batch_size = 3
     batch_holder = np.zeros((len(frame_list), 299, 299, 3))
+    other_metrics = []
     i=0
     for frame in frame_list:
         batch_holder[i]= frame[0] # [0]because each frame is attached with time and other metrics
+        other_metrics.append(frame[1:])
         i +=1
 
     #frame_time = frame_by_frame_prediction(batch_holder,model)
-    batch_time =  batch_prediciton(batch_holder, model)
-    return batch_time
+    batch_time, pred =  batch_prediciton(batch_holder, other_metrics,model)
+    return batch_time, pred
     #return frame_time,batch_time
 
 
 # generate batch predictions
-def batch_prediciton(batch_holder,model):
+def batch_prediciton(batch_holder,other_metrics,model):
   # get the intial date time processing
   dt1 = datetime.now()
   #image = preprocess_input(batch_holder)
   pred = model.predict(batch_holder)
-  #print('Predicted:', decode_predictions_custom(pred, 3))
-
-  for k in range(0,batch_holder.shape[0]):
-      #print(k)
-      decode_predictions(pred,k)
+  predict_labels = decode_predictions(pred,3)
+  #print('Predicted:', decode_predictions(pred, 3)[0])
+  # for predict in predict_labels:
+  #     print('Predicted:',predict)
 
   # get final time of batch prediction
   dt2 = datetime.now()
   time_diff_batch = dt2-dt1
-  return time_diff_batch.total_seconds()*1000 , pred
+  processed_framedata_with_other_metric = []
+  #print('Other Metrics***********', other_metrics)
+  for i in range(0,len(predict_labels)):
+      data =[]
+      data.append(predict_labels[i])
+      data[1:] = other_metrics[i]
+      processed_framedata_with_other_metric.append(data)
+
+  return time_diff_batch.total_seconds()*1000 , processed_framedata_with_other_metric
 
 
 # decode predictions
