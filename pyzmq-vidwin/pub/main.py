@@ -54,7 +54,8 @@ def calculate_container_CPU_Percent():
         systemDelta = data['cpu_stats']['system_cpu_usage'] - data['precpu_stats']['system_cpu_usage']
         if systemDelta > 0.0 and cpuDelta > 0.0:
             cpuPercent = (cpuDelta / systemDelta) * float(len(data['cpu_stats']['cpu_usage']['percpu_usage'])) * 100.0
-            print('CPU Usage ==> ' + str(cpuPercent) + ' %')
+            return cpuPercent
+            #print('CPU Usage ==> ' + str(cpuPercent) + ' %')
     except Exception as e:
         # print(str(e))
         print('File not created yet. Retrying...')
@@ -69,15 +70,16 @@ def calculate_container_memory():
         with open("/mem/" + container_id.rstrip() + "/memory.usage_in_bytes", 'r') as infile:
             mem_usage =float(infile.read()) / (1024 * 1024) # mem in MB
             mem_percent.append(mem_usage)
-            print('MEM USAGE', mem_usage)
+            #print('MEM USAGE', mem_usage)
 
         with open("/mem/" + container_id.rstrip() + "/memory.limit_in_bytes", 'r') as infile:
             mem_limit = float(infile.read())/(1024 * 1024) # max memory limit of container
             mem_percent.append(mem_limit)
-            print('MEM LIMIT', mem_limit)
+            #print('MEM LIMIT', mem_limit)
 
         mem_usage_percent = (mem_percent[0]/mem_percent[1])*100
-        print('MEM PERCENT %', mem_usage_percent)
+        return mem_usage_percent
+        #print('MEM PERCENT %', mem_usage_percent)
 
     except Exception as e:
         print('container id not found.....'+str(e))
@@ -110,17 +112,39 @@ def socket_send_window(q, url):
 
 import random
 
+# this function takes the resized microbatch as argument and return a differences while maintaining
+# keyframes.
+def create_diff_batch(frames):
+    diff_batch = []
+    keyframe = None
+    i = 0
+    for frame in frames:
+        if i == 0:
+            keyframe = frame[0]
+            diff_batch.append(frame)
+        else:
+            match_mask = (keyframe == frame)
+            idx_unmatched = np.argwhere(~match_mask)
+            idx_values = frame[tuple(zip(*idx_unmatched))]
+            frame[0] = [idx_unmatched, idx_values]
+            diff_batch.append(frame)
+        i = i + 1
+
+    return diff_batch
+
+
 def batcher(inp_q, out_q):
     frames = []
     while True:
         try:
             new_frame = inp_q.get()
             # print(new_frame)
-            if len(frames) == 50 or new_frame[2] == 1:
+            if len(frames) == 5 or new_frame[2] == 1:
                 # put random batches
                 idx = random.randint(5,15)
                 #out_q.put(frames[:int(idx/2)] + frames[int(3*idx/2):])
-                out_q.put(frames)
+                frame_diff_batch = create_diff_batch(frames)
+                out_q.put(frame_diff_batch)
                 print('put')
                 frames = []
             frames.append(new_frame)
@@ -157,12 +181,12 @@ def publisher(ip="0.0.0.0", port=5551):
     for frame in stream(video_path):
 
         if ctr in iframes_list:
-            batch_input_queue.put([frame,ctr,1])  # an iframe
+            batch_input_queue.put([frame,ctr,1,datetime.datetime.now(),calculate_container_CPU_Percent(),calculate_container_memory()])  # an iframe
         else:
-            batch_input_queue.put([frame,ctr,0])
+            batch_input_queue.put([frame,ctr,0,datetime.datetime.now(),calculate_container_CPU_Percent(),calculate_container_memory()])
 
-        calculate_container_CPU_Percent()
-        calculate_container_memory()
+        #calculate_container_CPU_Percent()
+        #calculate_container_memory()
 
 
         ctr += 1
