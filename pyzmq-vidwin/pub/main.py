@@ -15,6 +15,7 @@ from window import sliding
 from probe import get_i_frames
 from videostreamer import stream
 from multiprocessing import Process, Queue
+import sys
 
 # os.system('hostname -I')
 
@@ -84,6 +85,9 @@ def calculate_container_memory():
     except Exception as e:
         print('container id not found.....'+str(e))
 
+import _pickle as cPickle
+import zlib
+
 
 def socket_send(frame, socket):
     # md = dict(
@@ -91,7 +95,11 @@ def socket_send(frame, socket):
     #         shape = frame.shape,
     #     )
     # socket.send_json(md)
+    #a = np.array(frame, dtype=object)
+    #print('rame size***********', a.nbytes)
+    #print('MEMORY SIZE************************************************',asizeof(frame)/(1024*1024),asizeof(a)/(1024*1024),asizeof(zlib.compress(cPickle.dumps(frame)))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(a)))/(1024*1024))
     socket.send(pk.dumps(frame))
+    #socket.send(frame)
 
 def socket_send_window(q, url):
     ctx = zmq.Context()
@@ -115,44 +123,61 @@ import random
 # this function takes the resized microbatch as argument and return a differences while maintaining
 # keyframes.
 def create_diff_batch(frames):
-    diff_batch = []
-    keyframe = None
-    i = 0
-    for frame in frames:
-        if i == 0:
-            keyframe = frame[0]
-            diff_batch.append(frame)
-        else:
-            match_mask = (keyframe == frame)
-            idx_unmatched = np.argwhere(~match_mask)
-            idx_values = frame[tuple(zip(*idx_unmatched))]
-            frame[0] = [idx_unmatched, idx_values]
-            diff_batch.append(frame)
-        i = i + 1
+    try:
+        diff_batch = []
+        keyframe = None
+        i = 0
+        for frame in frames:
+            if i == 0:
+                keyframe = frame[0]
+                diff_batch.append(frame)
+            else:
+                #print('Memory of Frame********************8', asizeof(frame[0])/(1024*1024))
+                match_mask = (keyframe == frame[0])
+                idx_unmatched = np.argwhere(~match_mask).astype('uint8')
+                #print('Data TYPE***********',idx_unmatched.dtype)
+                idx_values = frame[0][tuple(zip(*idx_unmatched))]
+                #print('Memory of DIFF********************8', asizeof([idx_unmatched, idx_values])/(1024*1024))
+                frame[0] = [idx_unmatched, idx_values]
+                #frame[0] = [np.c_[idx_unmatched,idx_values].astype('int8')]
+                #frame[0] = [idx_unmatched]
+                #frame = frame[1:]d
+                diff_batch.append(frame)
+            i = i + 1
+        # print('Length********', len(frames), len(diff_batch))
+        return diff_batch
+    except Exception as e:
+        print('Exception**********************'+str(e))
 
-    return diff_batch
-
+#from pympler.asizeof import asizeof
 
 def batcher(inp_q, out_q):
     frames = []
     while True:
         try:
-            new_frame = inp_q.get()
-            # print(new_frame)
-            if len(frames) == 5 or new_frame[2] == 1:
+            new_frame = inp_q.get(timeout = 0.1)
+            #print(new_frame)
+            if len(frames)==40: #or new_frame[2] == 1:
                 # put random batches
                 idx = random.randint(5,15)
                 #out_q.put(frames[:int(idx/2)] + frames[int(3*idx/2):])
-                frame_diff_batch = create_diff_batch(frames)
-                out_q.put(frame_diff_batch)
+                #diff_batch = create_diff_batch(frames) # send only diff of batch values
+                #print('MEM*********************************************',asizeof(np.array(frames, dtype= object))/(1024*1024), asizeof(np.array(diff_batch, dtype= object))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(np.array(frames, dtype= object))))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(np.array(diff_batch, dtype= object))))/(1024*1024))               #print('MEMORY**************************************',asizeof(pk.dumps(frames))/(1024*1024), asizeof(pk.dumps(diff_batch))/(1024*1024))
+                out_q.put(frames)
+                #out_q.put(diff_batch)
                 print('put')
                 frames = []
             frames.append(new_frame)
+            #print('frame lengt************', len(frames))
         except queue.Empty:
             pass
 
 
 g = None
+
+def get_time_milliseconds():
+    time = (datetime.datetime.now() - datetime.datetime.utcfromtimestamp(0)).total_seconds() * 1000.0
+    return time
 
 def publisher(ip="0.0.0.0", port=5551):
     # ZMQ connection
@@ -181,9 +206,9 @@ def publisher(ip="0.0.0.0", port=5551):
     for frame in stream(video_path):
 
         if ctr in iframes_list:
-            batch_input_queue.put([frame,ctr,1,datetime.datetime.now(),calculate_container_CPU_Percent(),calculate_container_memory()])  # an iframe
+            batch_input_queue.put([frame,ctr,1,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory()])  # an iframe
         else:
-            batch_input_queue.put([frame,ctr,0,datetime.datetime.now(),calculate_container_CPU_Percent(),calculate_container_memory()])
+            batch_input_queue.put([frame,ctr,0,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory()])
 
         #calculate_container_CPU_Percent()
         #calculate_container_memory()
