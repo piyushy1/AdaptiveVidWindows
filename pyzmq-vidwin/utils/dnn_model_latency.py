@@ -13,7 +13,7 @@ import math
 from keras.models import load_model
 from keras.applications.resnet50 import ResNet50
 from keras.applications.vgg16 import VGG16
-from keras.applications.mobilenet import mobilenet
+from tensorflow.keras.applications.mobilenet import MobileNet
 from statistics import mean
 
 
@@ -171,9 +171,12 @@ def plotgraph(frame_latency, batch_latency):
     r2 = [x + barWidth for x in r1]
     r3 = [x + barWidth for x in r2]
 
+    CB91_Blue = '#2CBDFE'
+    CB91_Green = '#47DBCD'
+    CB91_Amber = '#F5B14C'
     # Make the plot
-    plt.bar(r1, frame_latency, color='#FF2E2E', width=barWidth, edgecolor='white', label='Frame By Frame Processing')
-    plt.bar(r2, batch_latency, color='#92D050', width=barWidth, edgecolor='white', label='Batch Processing')
+    plt.bar(r1, frame_latency, color=CB91_Green, width=barWidth, edgecolor='white', label='Frame By Frame Processing')
+    plt.bar(r2, batch_latency, color=CB91_Amber, width=barWidth, edgecolor='white', label='Batch Processing')
     #plt.bar(r3, ObjAT, color='#2d7f5e', width=barWidth, edgecolor='white', label='Objects+Attributes+Tracking' )
 
     # Add xticks on the middle of the group bars
@@ -184,7 +187,7 @@ def plotgraph(frame_latency, batch_latency):
     # Create legend & Show graphic
     plt.legend()
     #plt.grid()
-    plt.savefig('Latency4.svg', format='svg', dpi=1000,bbox_inches='tight')
+    plt.savefig('Latency6.svg', format='svg', dpi=1000,bbox_inches='tight')
     plt.show()
 
     # batch_x_ticks =[5,10,25,50,100]
@@ -209,7 +212,7 @@ def plotgraph(frame_latency, batch_latency):
 # model_VGG = VGG16(weights='imagenet')
 
 # load mobilenet
-model_mobilenet = keras.applications.mobilenet.MobileNet()
+model_mobilenet = MobileNet()
 
 # # load mobilenetv2
 # model_mobilenetv2 = keras.applications.mobilenet_v2.MobileNetV2()
@@ -224,7 +227,7 @@ batch_latency_time =[]
 for model in range(0,len(model_list)):
     for i in range(0,len(batch_size)):
         #print(batch_size[i])
-        frame_latency, batch_latency = load_video_into_frames('3.mp4',batch_size[i], model_list[model])
+        frame_latency, batch_latency = load_video_into_frames('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4',batch_size[i], model_list[model])
         frame_latency_time.append(frame_latency)
         batch_latency_time.append(batch_latency)
 
