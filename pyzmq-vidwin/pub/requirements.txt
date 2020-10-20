@@ -3,4 +3,4 @@ psutil
 opencv-contrib-python-headless
 ffmpeg
 docker
-glances
+iperf3==0.1.11

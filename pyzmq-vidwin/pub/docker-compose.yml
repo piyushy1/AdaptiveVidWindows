@@ -8,7 +8,8 @@ services:
       dockerfile: 'Dockerfile'
     tty: true
     pid: "host"
-    command: ["python3", "/app/main.py", "--ip", "sub"]
+    #command: ["python3", "/app/main.py", "--ip", "sub"]
+    command: ["python3", "/app/main.py", "--ip", '172.17.0.1']
     volumes:
       - /home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/testhost:/app/video
       #- /var/run/docker.sock:/var/run/docker.sock
@@ -17,6 +18,15 @@ services:
       #- /sys/fs/cgroup/cpu,cpuacct:/system_cpu/
       #- /proc:/host_proc/
       - /home/dhaval/piyush/ViIDWIN/Code/pyzmq-vidwin/stats:/docker_stats/
-    mem_limit: 3000m
-    mem_reservation: 1000m
+    environment:
+      - TZ=Europe/Dublin
+    mem_limit: 500m
+    mem_reservation: 100m
     cpuset: 0-0
+#    networks:
+#      sub_net2:
+#        ipv4_address: 10.5.0.6
+#
+#networks:
+#  sub_net2:
+#    external: true

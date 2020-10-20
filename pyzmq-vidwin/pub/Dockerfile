@@ -8,7 +8,7 @@ MAINTAINER Piyush Yadav
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
-  gcc
+  gcc iperf3
 
 WORKDIR /app
 COPY requirements.txt /app
