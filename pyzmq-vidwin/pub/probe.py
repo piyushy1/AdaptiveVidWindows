@@ -1,6 +1,6 @@
 import subprocess
 
-
+# function to get i frames of the video
 def get_i_frames(video_path):
 	ffprobe = subprocess.Popen(["ffprobe", "-select_streams", "v", "-show_frames", "-show_entries", "frame=pict_type", "-of", "csv", f"{video_path}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 

@@ -38,22 +38,47 @@ def get_frame_distance(frame1, frame2):
 # or slide time end
 MAX_BATCH_SIZE = 90
 INTERFRAME_SIMILARITY_SCORE = 0.99
-def batcher(inp_q, out_q):
+def batcher(inp_q, out_q, query_predicates):
+    range_counter = 0
+    slide_time =[]
     frames = []
     while True:
         try:
             new_frame = inp_q.get(timeout = 0.1)
-            #print(new_frame)
-            if len(frames)==MAX_BATCH_SIZE or new_frame[2] == 1 or get_frame_distance(frames[0][0],new_frame[0]) < INTERFRAME_SIMILARITY_SCORE:
-                # put random batches
-                idx = random.randint(5,15)
-                #out_q.put(frames[:int(idx/2)] + frames[int(3*idx/2):])
-                #diff_batch = create_diff_batch(frames) # send only diff of batch values
-                #print('MEM*********************************************',asizeof(np.array(frames, dtype= object))/(1024*1024), asizeof(np.array(diff_batch, dtype= object))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(np.array(frames, dtype= object))))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(np.array(diff_batch, dtype= object))))/(1024*1024))               #print('MEMORY**************************************',asizeof(pk.dumps(frames))/(1024*1024), asizeof(pk.dumps(diff_batch))/(1024*1024))
-                out_q.put(frames)
-                #out_q.put(diff_batch)
-                print('MICRO-BATCH SIZE********************', len(frames))
-                frames = []
+
+            if len(slide_time) == 0:
+                slide_time.append(new_frame[3])
+            # range time condition
+            if range_counter ==0:
+                if new_frame[3]-slide_time[0] >= query_predicates['RANGE']*1000:
+                    #print('RANGE MICROBATCHING TIME~~~~~~~~~~~~~~~~~~~~~~~~~~',new_frame[3]-slide_time[0] )
+                    out_q.put(frames)
+                    print('RANGE MICRO-BATCH SIZE********************', len(frames))
+                    frames = []
+                    slide_time =[]
+                    range_counter+=1
+
+            # check slide time condition
+            if range_counter != 0 and len(frames)>1:
+                if new_frame[3] - slide_time[0] >= query_predicates['SLIDE'] * 1000:
+                    #print('SLIDE MICROBATCHING TIME??????????????????????????? ', new_frame[3] - slide_time[0])
+                    out_q.put(frames)
+                    print('SLIDE MICRO-BATCH SIZE********************', len(frames))
+                    frames = []
+                    slide_time = []
+
+            # other microbatch conditions...
+            if len(frames)>1:
+                if len(frames)==MAX_BATCH_SIZE or new_frame[2] == 1 or get_frame_distance(frames[0][0],new_frame[0]) < INTERFRAME_SIMILARITY_SCORE:
+                    # put random batches
+                    idx = random.randint(5,15)
+                    #out_q.put(frames[:int(idx/2)] + frames[int(3*idx/2):])
+                    #diff_batch = create_diff_batch(frames) # send only diff of batch values
+                    #print('MEM*********************************************',asizeof(np.array(frames, dtype= object))/(1024*1024), asizeof(np.array(diff_batch, dtype= object))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(np.array(frames, dtype= object))))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(np.array(diff_batch, dtype= object))))/(1024*1024))               #print('MEMORY**************************************',asizeof(pk.dumps(frames))/(1024*1024), asizeof(pk.dumps(diff_batch))/(1024*1024))
+                    out_q.put(frames)
+                    #out_q.put(diff_batch)
+                    print('MICRO-BATCH SIZE********************', len(frames))
+                    frames = []
             frames.append(new_frame)
             #print('frame lengt************', len(frames))
         except queue.Empty:

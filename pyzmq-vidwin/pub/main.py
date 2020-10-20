@@ -114,7 +114,7 @@ def socket_send_window(q, url):
             new_block = q.get(timeout=0.1)
             if type(new_block) == str and new_block == 'END':
                 break
-            print(len(new_block))
+            #print(len(new_block))
             socket_send(new_block, socket)
             # socket.send(new_block)
         except queue.Empty:
@@ -165,9 +165,12 @@ def publisher(ip="0.0.0.0", port=5551):
     print("Going to connect to: {}".format(url))
     print("Pub connected to: {}\nSending data...".format(url))
 
+    # fetch the query predicates
+    query_predicates = parse_query()
+
     batch_input_queue = Queue()
     batch_output_queue = Queue()
-    batcher_process = Process(name='Batcher',target=batcher, args=(batch_input_queue, batch_output_queue,))
+    batcher_process = Process(name='Batcher',target=batcher, args=(batch_input_queue, batch_output_queue,query_predicates,))
     batcher_process.start()
 
     socket_send_window_process = Process(name='Socket Sender ',target=socket_send_window, args=(batch_output_queue,url,))
@@ -178,9 +181,6 @@ def publisher(ip="0.0.0.0", port=5551):
     wind = []
     import time
 
-    # simplified VEQL query strucutre
-    query1 = 'CONJ(Car,Person) WITHINWINDOW(5,2) ACCURACY=TOP-2'
-    query_predicates = parse_query(query1)
 
     ctr = 1
     video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4' #absolute path
@@ -195,10 +195,10 @@ def publisher(ip="0.0.0.0", port=5551):
         # if frame is i frame put i frame info
         if ctr in iframes_list:
             #batch_input_queue.put([frame,ctr,1,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory()])  # an iframe
-            batch_input_queue.put([frame, ctr, 1])  # an iframe
+            batch_input_queue.put([frame, ctr, 1,get_time_milliseconds()])  # an iframe
         else:
             #batch_input_queue.put([frame,ctr,0,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory()])
-            batch_input_queue.put([frame, ctr, 0])
+            batch_input_queue.put([frame, ctr, 0,get_time_milliseconds()])
 
         #calculate_container_CPU_Percent()
         #calculate_container_memory()
