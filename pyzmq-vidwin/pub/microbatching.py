@@ -33,13 +33,18 @@ def get_frame_distance(frame1, frame2):
     #       base_base, '/')
 
 
+# function to create micro batches
+# if its I-Frame or distance between frame less than 0.99 or batch size > XXX
+# or slide time end
+MAX_BATCH_SIZE = 90
+INTERFRAME_SIMILARITY_SCORE = 0.99
 def batcher(inp_q, out_q):
     frames = []
     while True:
         try:
             new_frame = inp_q.get(timeout = 0.1)
             #print(new_frame)
-            if len(frames)==40: #or new_frame[2] == 1:
+            if len(frames)==MAX_BATCH_SIZE or new_frame[2] == 1 or get_frame_distance(frames[0][0],new_frame[0]) < INTERFRAME_SIMILARITY_SCORE:
                 # put random batches
                 idx = random.randint(5,15)
                 #out_q.put(frames[:int(idx/2)] + frames[int(3*idx/2):])
@@ -47,7 +52,7 @@ def batcher(inp_q, out_q):
                 #print('MEM*********************************************',asizeof(np.array(frames, dtype= object))/(1024*1024), asizeof(np.array(diff_batch, dtype= object))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(np.array(frames, dtype= object))))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(np.array(diff_batch, dtype= object))))/(1024*1024))               #print('MEMORY**************************************',asizeof(pk.dumps(frames))/(1024*1024), asizeof(pk.dumps(diff_batch))/(1024*1024))
                 out_q.put(frames)
                 #out_q.put(diff_batch)
-                print('put')
+                print('MICRO-BATCH SIZE********************', len(frames))
                 frames = []
             frames.append(new_frame)
             #print('frame lengt************', len(frames))

@@ -11,9 +11,11 @@ import argparse
 import datetime
 import numpy as np
 import pickle as pk
-from window import sliding
-from probe import get_i_frames
-from videostreamer import stream
+from pub.microbatching import batcher
+from pub.window import sliding
+from pub.probe import get_i_frames
+from pub.videostreamer import stream
+from pub.videoquery import parse_query
 from multiprocessing import Process, Queue
 import sys
 
@@ -151,28 +153,6 @@ def create_diff_batch(frames):
 
 #from pympler.asizeof import asizeof
 
-def batcher(inp_q, out_q):
-    frames = []
-    while True:
-        try:
-            new_frame = inp_q.get(timeout = 0.1)
-            #print(new_frame)
-            if len(frames)==40: #or new_frame[2] == 1:
-                # put random batches
-                idx = random.randint(5,15)
-                #out_q.put(frames[:int(idx/2)] + frames[int(3*idx/2):])
-                #diff_batch = create_diff_batch(frames) # send only diff of batch values
-                #print('MEM*********************************************',asizeof(np.array(frames, dtype= object))/(1024*1024), asizeof(np.array(diff_batch, dtype= object))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(np.array(frames, dtype= object))))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(np.array(diff_batch, dtype= object))))/(1024*1024))               #print('MEMORY**************************************',asizeof(pk.dumps(frames))/(1024*1024), asizeof(pk.dumps(diff_batch))/(1024*1024))
-                out_q.put(frames)
-                #out_q.put(diff_batch)
-                print('put')
-                frames = []
-            frames.append(new_frame)
-            #print('frame lengt************', len(frames))
-        except queue.Empty:
-            pass
-
-
 g = None
 
 def get_time_milliseconds():
@@ -197,18 +177,28 @@ def publisher(ip="0.0.0.0", port=5551):
 
     wind = []
     import time
+
+    # simplified VEQL query strucutre
+    query1 = 'CONJ(Car,Person) WITHINWINDOW(5,2) ACCURACY=TOP-2'
+    query_predicates = parse_query(query1)
+
     ctr = 1
-    #video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4'
-    video_path = '/app/video/test2.mp4'
+    video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4' #absolute path
+    #video_path = '/app/video/test2.mp4' # docker volume
+
+    # get the list of i frames..
     iframes_list = get_i_frames(video_path)
-    print('The iframe list***************', iframes_list)
+    #print('The iframe list***************', iframes_list)
 
     for frame in stream(video_path):
-
+        #get_bw_from_server()
+        # if frame is i frame put i frame info
         if ctr in iframes_list:
-            batch_input_queue.put([frame,ctr,1,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory()])  # an iframe
+            #batch_input_queue.put([frame,ctr,1,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory()])  # an iframe
+            batch_input_queue.put([frame, ctr, 1])  # an iframe
         else:
-            batch_input_queue.put([frame,ctr,0,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory()])
+            #batch_input_queue.put([frame,ctr,0,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory()])
+            batch_input_queue.put([frame, ctr, 0])
 
         #calculate_container_CPU_Percent()
         #calculate_container_memory()
@@ -216,6 +206,18 @@ def publisher(ip="0.0.0.0", port=5551):
 
         ctr += 1
         #time.sleep(0.1)
+
+
+def get_bw_from_server():
+    import iperf3
+
+    client = iperf3.Client()
+    client.server_hostname = '10.5.0.5'
+    client.port = 6969
+    client.json_output = True
+    print('Fetching Bandwidth...')
+    result = client.run()
+    print('  Gigabits per second  (Gbps)  {0}'.format(result.sent_Mbps / 1024))
 
 
 if __name__ == "__main__":
