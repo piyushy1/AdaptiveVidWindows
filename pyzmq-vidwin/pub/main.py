@@ -11,11 +11,14 @@ import argparse
 import datetime
 import numpy as np
 import pickle as pk
-from pub.microbatching import batcher
-from pub.window import sliding
-from pub.probe import get_i_frames
-from pub.videostreamer import stream
-from pub.videoquery import parse_query
+from microbatching import batcher
+from microbatchresizing import resizer
+from microbatching import fixed_batcher
+from microbatchresizing import fixed_resizer
+from window import sliding
+from probe import get_i_frames
+from videostreamer import stream
+from videoquery import parse_query
 from multiprocessing import Process, Queue
 import sys
 
@@ -100,6 +103,7 @@ def socket_send(frame, socket):
     #a = np.array(frame, dtype=object)
     #print('rame size***********', a.nbytes)
     #print('MEMORY SIZE************************************************',asizeof(frame)/(1024*1024),asizeof(a)/(1024*1024),asizeof(zlib.compress(cPickle.dumps(frame)))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(a)))/(1024*1024))
+    print('Data Send')
     socket.send(pk.dumps(frame))
     #socket.send(frame)
 
@@ -161,7 +165,8 @@ def get_time_milliseconds():
 
 def publisher(ip="0.0.0.0", port=5551):
     # ZMQ connection
-    url = f"tcp://{ip}:{port}"
+    #url = f"tcp://{ip}:{port}"
+    url = "tcp://{}:{}".format(ip, port)
     print("Going to connect to: {}".format(url))
     print("Pub connected to: {}\nSending data...".format(url))
 
@@ -170,10 +175,15 @@ def publisher(ip="0.0.0.0", port=5551):
 
     batch_input_queue = Queue()
     batch_output_queue = Queue()
+    resizer_output_queue = Queue()
+    # start micro-batcher
     batcher_process = Process(name='Batcher',target=batcher, args=(batch_input_queue, batch_output_queue,query_predicates,))
     batcher_process.start()
-
-    socket_send_window_process = Process(name='Socket Sender ',target=socket_send_window, args=(batch_output_queue,url,))
+    # start micro-batch resizer
+    batch_resizer_process = Process(name='Resizer',target=resizer, args=(batch_output_queue, resizer_output_queue,query_predicates,))
+    batch_resizer_process.start()
+    # send data to socket
+    socket_send_window_process = Process(name='Socket Sender ',target=socket_send_window, args=(resizer_output_queue,url,))
     # socket_send_window_process = Process(name='Socket Sender ',target=socket_send_window, args=(sliding_window_output_queue,url,))
     socket_send_window_process.start()
     # time.sleep(5)
@@ -184,11 +194,13 @@ def publisher(ip="0.0.0.0", port=5551):
 
     ctr = 1
     video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4' #absolute path
+    #video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Jacksonhole2391.mp4'  # absolute path
     #video_path = '/app/video/test2.mp4' # docker volume
 
     # get the list of i frames..
     iframes_list = get_i_frames(video_path)
-    #print('The iframe list***************', iframes_list)
+    #iframes_list = [1, 151, 301, 451, 601, 751, 901, 1051] #temp fix for conntainer
+    print('The iframe list***************', iframes_list)
 
     for frame in stream(video_path):
         #get_bw_from_server()

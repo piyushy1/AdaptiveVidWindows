@@ -17,6 +17,7 @@ def stream(video_path):
     print(f"Sleep Time : { sleep_time}")
     # to check the frame count
     frame_count_num = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    print('FRAME COUNT***', frame_count_num)
     #duration = frame_count_num/fps
     duration = frame_count_num / 30
     print(f"Duration of video {duration%60}")
@@ -55,9 +56,9 @@ def stream(video_path):
         # socket.send_json(md)
         # socket.send(frame)
         # frame resizing the frame...
-        frame = cv2.resize(frame, (224, 224))
+        frame = cv2.resize(frame, (800,800))
         yield frame
-        print(f'Frame count = {frame_count}')
+        #print(f'Frame count = {frame_count}')
 
         # need to set the frame rate:
         # if frame_count in i_frames:
@@ -72,6 +73,9 @@ def stream(video_path):
 
         time.sleep(sleep_time)
         frame_count += 1
+        # if frame_count >=50:
+        #     time.sleep(2)
+
         # Our operations on the frame come here
         #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # Display the resulting frame
