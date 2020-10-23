@@ -163,7 +163,7 @@ def publisher(ip="0.0.0.0", port=5551):
 
     ctr = 1
     video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4' #absolute path
-    #video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Jacksonhole2391.mp4'  # absolute path
+    # video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Jacksonhole2391.mp4'  # absolute path
     #video_path = '/app/video/test2.mp4' # docker volume
 
     # get the list of i frames..
@@ -187,18 +187,6 @@ def publisher(ip="0.0.0.0", port=5551):
 
         ctr += 1
         #time.sleep(0.1)
-
-
-def get_bw_from_server():
-    import iperf3
-
-    client = iperf3.Client()
-    client.server_hostname = '10.5.0.5'
-    client.port = 6969
-    client.json_output = True
-    print('Fetching Bandwidth...')
-    result = client.run()
-    print('  Gigabits per second  (Gbps)  {0}'.format(result.sent_Mbps / 1024))
 
 
 if __name__ == "__main__":

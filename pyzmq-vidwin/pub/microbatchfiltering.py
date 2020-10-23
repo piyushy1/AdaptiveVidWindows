@@ -2,6 +2,8 @@ import os
 import json
 import queue
 
+#partial match cache
+PM_CACHE ={}
 # current container CPU usage
 # RUN docker stats writer running to keep these functions available
 def calculate_container_CPU_Percent():
@@ -45,15 +47,26 @@ def calculate_container_memory():
     except Exception as e:
         print('container id not found.....'+str(e))
 
+def initialize_cache(query_predicates):
+    for object in query_predicates['object']:
+        PM_CACHE[object]= 0
+    #print('CACHE????????????????', PM_CACHE)
+
 
 # lazy filter
 def lazyfilter(inp_q, out_q, query_predicates):
+    # initalise partial match cache with
+    initialize_cache(query_predicates)
 
     while True:
         try:
-            new_micro_batch = inp_q.get(timeout= None)
+            new_resized_micro_batch = inp_q.get(timeout= None)
+            print('RESIZED MICROBATCH****',new_resized_micro_batch[-1])
 
-            out_q.put(new_micro_batch)
+            # calculate the entropy of microbatch
+            # calcu;ate the memory and cpu consumption and filter the batch///
+            # cache concept
+            out_q.put(new_resized_micro_batch)
 
         except queue.Empty:
             pass

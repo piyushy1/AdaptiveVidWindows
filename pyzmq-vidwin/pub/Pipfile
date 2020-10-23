@@ -1,0 +1,32 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+pyzmq = "==18.0.0"
+psutil = "*"
+opencv-contrib-python-headless = "*"
+ffmpeg = "*"
+docker= "*"
+matplotlib = "*"
+#keras-applications = "==1.0.7"
+keras = "==2.2.4"
+#keras-preprocessing = "==1.0.9"
+tensorflow = "==2.1.0"
+pycore = "*"
+ann-visualizer = "*"
+graphviz = "*"
+google-images-download = "*"
+moviepy = "*"
+memory-profiler = "*"
+pympler = "*"
+torch = "==1.4.0"
+torchvision = "==0.5."
+pybgs = "*"
+iperf3 = "*"
+
+[requires]
+python_version = "3.6"

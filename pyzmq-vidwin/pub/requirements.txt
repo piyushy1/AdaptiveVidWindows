@@ -3,4 +3,5 @@ psutil
 opencv-contrib-python-headless
 ffmpeg
 docker
-iperf3==0.1.11
+pillow==5.4.1
+tensorflow==2.1.0

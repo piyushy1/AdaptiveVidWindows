@@ -101,25 +101,25 @@ def keyframe_resizer(keyframe,model,query_predicates, resolution_set):
                 # increase the resolution of image to check
                 prev_object_present = 0
                 if prev_res_flag == True:
-                    return prev_res
+                    return object_present,prev_res
                 else:
                     if resolution_set[resolution_middle] != CANDIDATE_RESOLUTION_SET[-1]:
                         prev_res_flag = False
                         prev_res = resolution_set[resolution_middle]
                         resolution_middle, object_present = predict_label_binary_search(keyframe,model,query_predicates,resolution_set[resolution_middle:])
                     else:
-                        return CANDIDATE_RESOLUTION_SET[0] # if resolution not find till end return lowest resolution
+                        return object_present,CANDIDATE_RESOLUTION_SET[0] # if resolution not find till end return lowest resolution
 
             # if object present then decrease the resolution
             else:
                 if len(object_present)==1:
                     if prev_object_present > len(object_present):
-                        return prev_res
+                        return object_present,prev_res
                     else:
                         prev_object_present = len(object_present)
                         # simply resize
                         if resolution_set[resolution_middle] == CANDIDATE_RESOLUTION_SET[0]:
-                            return CANDIDATE_RESOLUTION_SET[0]
+                            return object_present,CANDIDATE_RESOLUTION_SET[0]
                         else:
                             prev_res_flag = True
                             prev_res = resolution_set[resolution_middle]
@@ -127,12 +127,12 @@ def keyframe_resizer(keyframe,model,query_predicates, resolution_set):
 
                 if len(object_present)>1:
                     if prev_object_present > len(object_present):
-                        return prev_res
+                        return object_present,prev_res
                     else:
                         prev_object_present = len(object_present)
                         # simply resize
                         if resolution_set[resolution_middle] == CANDIDATE_RESOLUTION_SET[0]:
-                            return CANDIDATE_RESOLUTION_SET[0]
+                            return object_present,CANDIDATE_RESOLUTION_SET[0]
                         else:
                             if get_sum(object_present)> 0.5 and get_ratio(object_present)>0.5:
                                 prev_res_flag = True
@@ -140,7 +140,7 @@ def keyframe_resizer(keyframe,model,query_predicates, resolution_set):
                                 resolution_middle, object_present = predict_label_binary_search(keyframe, model,
                                                                                                 query_predicates,resolution_set[:resolution_middle])
                             else:
-                                return prev_res
+                                return object_present,prev_res
 
                 #     # resize with ration
         except Exception as e:
@@ -161,16 +161,18 @@ def resizer(inp_q, out_q, query_predicates):
     while True:
         try:
             new_micro_batch = inp_q.get(timeout= None)
-            resolution = keyframe_resizer(new_micro_batch[0][0],model,query_predicates,CANDIDATE_RESOLUTION_SET)
+            objectlist, resolution = keyframe_resizer(new_micro_batch[0][0],model,query_predicates,CANDIDATE_RESOLUTION_SET)
             print('The RESOLUTION IS *********************************', resolution)
             #resize full microbatch
             resized_microbatch = resize_micro_batch(new_micro_batch,resolution)
+            # add in last the top-k values presnet in the microbatch
+            resized_microbatch.append(objectlist)
             out_q.put(resized_microbatch)
 
         except queue.Empty:
             pass
 
-# for EVALUATION
+# for EVALUATION... do fixed resize from videostreamer
 def fixed_resizer(inp_q, out_q, query_predicates):
 
     while True:

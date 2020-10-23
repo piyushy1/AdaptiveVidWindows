@@ -3,10 +3,10 @@ services:
 
   pub:
     runtime: nvidia
-    image: publisher:dev
+    image: publisher-cpu:dev
     build:
       context: '.'
-      dockerfile: 'Dockerfile'
+      dockerfile: 'Dockerfile-cpu'
     tty: true
     pid: "host"
     #command: ["python3", "/app/main.py", "--ip", "sub"]
