@@ -10,10 +10,15 @@ import matplotlib.pyplot as plt
 import random
 import tensorflow as tf
 
+# torch.backends.cudnn.enabled = False
 
 # model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
 # model.cuda()
 # model.eval()
+
+# detect_fn = tf.saved_model.load(
+#    "/home/dhaval/piyush/ViIDWIN/Code/pyzmq-vidwin/faster_rcnn_resnet50_coco_2018_01_28/saved_model")
+
 
 # image = Image.open('/home/dhaval/Desktop/Car-Image.jpg')
 #
@@ -26,7 +31,6 @@ import tensorflow as tf
 # predictions = model(x)
 #
 # print(predictions)
-
 
 def load_model(model_name):
     base_url = 'http://download.tensorflow.org/models/object_detection/'
@@ -44,8 +48,6 @@ def load_model(model_name):
     return model
 
 
-detection_model = load_model('faster_rcnn_resnet50_coco_2018_01_28')
-
 COCO_INSTANCE_CATEGORY_NAMES = [
     '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
     'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A', 'stop sign',
@@ -62,16 +64,31 @@ COCO_INSTANCE_CATEGORY_NAMES = [
 ]
 
 
-def get_prediction(img_batch, threshold, res):
-    width, height = res
-    input_tensor = [tf.convert_to_tensor(frame) for frame in img_batch]
-    predictions = detection_model(tf.stack(input_tensor))
-    pred_classes = [[COCO_INSTANCE_CATEGORY_NAMES[index] for index in list(frame_classes)] for frame_classes
-                    in list(predictions['detection_classes'].numpy().astype(np.int64))]  # Get the Prediction Score
-    pred_boxes = [pred * [height, width, height, width] for pred in
-                  list(predictions['detection_boxes'].numpy())]  # Bounding boxes
+def get_prediction(img_batch, threshold):
+    # transform = TF.Compose([TF.ToTensor()])  # Defing PyTorch Transform
+    # frames = [transform(Image.fromarray(frame)).cuda() for frame in img_batch]
+    # predictions = model(frames)  # Pass the image to the model
+    # del frames
+    # del transform
+    # import gc
+    # for obj in gc.get_objects():
+    #     try:
+    #         if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+    #             print(type(obj), obj.size())
+    #     except Exception as e:
+    #         pass
 
-    pred_score = [list(scores) for scores in list(predictions['detection_scores'].numpy())]
+    # torch.cuda.empty_cache()
+    detection_model = load_model('faster_rcnn_resnet50_coco_2018_01_28')
+    input_tensor = tf.convert_to_tensor(img_batch[0])
+    input_tensor = input_tensor[tf.newaxis, ...]
+    detections = detection_model(input_tensor)
+    print(detections)
+
+    pred_classes = [[COCO_INSTANCE_CATEGORY_NAMES[index] for index in list(pred['labels'].cpu().data.numpy())] for pred
+                    in predictions]  # Get the Prediction Score
+    pred_boxes = [pred['boxes'].cpu().data.detach().numpy() for pred in predictions]  # Bounding boxes
+    pred_score = [list(pred['scores'].cpu().data.detach().numpy()) for pred in predictions]
     pred_t = [[index for index, value in enumerate(score) if value > threshold] for score in
               pred_score]  # Get list of index with score greater than threshold.
     pred_boxes = [pred_box[pred_t[index]] for index, pred_box in enumerate(pred_boxes)]
@@ -82,12 +99,13 @@ def get_prediction(img_batch, threshold, res):
 def scale_up_coordinates(global_bbox, original_res, batch_res):
     original_res = np.array(original_res)
     batch_res = np.array(batch_res)
-
     original_coordinate_1 = np.array((global_bbox[0], global_bbox[1]))
     new_coordinate_1 = (original_coordinate_1 / (batch_res / original_res))
 
+    # x, y = int(new_x[0]), int(new_x[1])
     original_coordinate_2 = np.array((global_bbox[2], global_bbox[3]))
     new_coordinate_2 = (original_coordinate_2 / (batch_res / original_res))
+    # x1, y1 = int(new_y[0]), int(new_y[1])
 
     return [int(new_coordinate_1[0]), int(new_coordinate_1[1]), int(new_coordinate_2[0]), int(new_coordinate_2[1])]
 
@@ -103,23 +121,19 @@ def update_global_bounding_box(global_bbox, bounding_box):
         global_bbox[3] = bounding_box[3]
 
 
-def object_detection_api(img, threshold=0.5, rect_th=3, text_size=1, text_th=3, res=None):
+def object_detection_api(img, threshold=0.5, rect_th=3, text_size=1, text_th=3):
     global_batch_bbox = [9999, 9999, 0, 0]
-    pred_boxes, pred_classes = get_prediction(img, threshold, res)  # Get predictions
+    pred_boxes, pred_class = get_prediction(img, threshold)  # Get predictions
 
-    for frame_bounding_box, frame_pred_class in zip(pred_boxes, pred_classes):
+    for frame_bounding_box, frame_pred_class in zip(pred_boxes, pred_class):
         for bounding_box, obj_class in zip(list(frame_bounding_box), frame_pred_class):
             update_global_bounding_box(global_batch_bbox, bounding_box)
-            # cv2.rectangle(img[0], (int(bounding_box[1]), int(bounding_box[0])),
-            #               (int(bounding_box[3]), int(bounding_box[2])),
-            #               color=(0, 255, 0), thickness=rect_th)  # Draw Rectangle with the coordinates
-            # cv2.putText(img[0], obj_class, (int(bounding_box[1]), int(bounding_box[0])), cv2.FONT_HERSHEY_SIMPLEX,
-            #             text_size, (0, 255, 0),
-            #             thickness=text_th)  # Write the prediction class
-            # plt.figure(figsize=(20, 30))  # display the output image
-            # plt.imsave('/home/dhaval/piyush/ViIDWIN/Code/pyzmq-vidwin/images/batch.png', img[0])
-            # plt.close()
-            # print()
+    # cv2.rectangle(img[0], (global_bbox[0],global_bbox[1]), (global_bbox[2],global_bbox[3]), color=(0, 255, 0),
+    #               thickness=rect_th)  # Draw Rectangle with the coordinates
+    # # cv2.putText(img[0], obj_class, (bounding_box[0],bounding_box[1]), cv2.FONT_HERSHEY_SIMPLEX, text_size, (0, 255, 0),
+    # #             thickness=text_th)  # Write the prediction class
+    # plt.figure(figsize=(20, 30))  # display the output image
+    # plt.imsave('/home/dhaval/piyush/ViIDWIN/Code/pyzmq-vidwin/images/batch_'+str(c)+'.png', img[0])
     return global_batch_bbox
 
 
@@ -130,8 +144,7 @@ def stream(video_path):
     height = cap.get(4)  # float
     print('Original width, height:', width, height)
 
-    # (height, width)
-    resolutions = [(100, 100), (250, 250), (500, 500)]
+    resolutions = [(1280, 720)]
 
     # read the fps so that opencv read with same fps speed
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -156,10 +169,10 @@ def stream(video_path):
             # frame = Image.fromarray(frame)
             frame_batch.append(frame)
 
-            if len(frame_batch) == 40:
+            if len(frame_batch) == 18:
                 print('Batch:' + str(i) + ' width, height:', res)
-                global_batch_bbox = object_detection_api(frame_batch, threshold=0.5, res=res)
-                global_batch_bbox = scale_up_coordinates(global_batch_bbox, original_res=(height, width), batch_res=res)
+                global_batch_bbox = object_detection_api(frame_batch, threshold=0.5)
+                global_batch_bbox = scale_up_coordinates(global_batch_bbox, original_res=(width, height), batch_res=res)
                 update_global_bounding_box(global_video_bbox, global_batch_bbox)
                 frame_batch = []
                 res = random.choice(resolutions)
@@ -169,8 +182,7 @@ def stream(video_path):
             break
     cap.release()
 
-    pt1, pt2 = (global_video_bbox[1], global_video_bbox[0]), (
-        global_video_bbox[3], global_video_bbox[2])
+    pt1, pt2 = (global_video_bbox[0], global_video_bbox[1]), (global_video_bbox[2], global_video_bbox[3])
     cv2.rectangle(original_image, pt1, pt2, color=(0, 255, 0), thickness=3)
     plt.imsave('/home/dhaval/piyush/ViIDWIN/Code/pyzmq-vidwin/images/final.png', original_image)
 

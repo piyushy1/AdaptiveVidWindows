@@ -49,19 +49,21 @@ def create_lightweight_mobilenet(layer_name, number):
     # let's add a fully-connected layer
     x=Dense(1024,activation='relu')(x) #we add dense layers so that the model can learn more complex functions and classify for better results.
     x=Dense(1024,activation='relu')(x) #dense layer 2
+    x=Dense(1024,activation='relu')(x) #dense layer 2
     x=Dense(512,activation='relu')(x) #dense layer 3
     # and a logistic layer -- let's say we have 20 voc classes
-    preds = Dense(2, activation='softmax')(x)
+    preds = Dense(20, activation='softmax')(x)
 
     model=Model(inputs=base_model.input,outputs=preds) ##now a model has been created based on our architecture
 
-    # for i,layer in enumerate(model.layers):
-    #     print('Final Model*****', i, layer.name)
-    #     print(len(model.layers))
+    for i,layer in enumerate(base_model.layers):
+        print('Original Model*****', i, layer.name)
 
 
-    # for i,layer in enumerate(base_model.layers):
-    #     print('Original Model*****', i, layer.name)
+    for i,layer in enumerate(model.layers):
+        print('Final Model*****', i, layer.name)
+        print(len(model.layers))
+
 
     # first: train only the top layers (which were randomly initialized)
     # i.e. freeze all convolutional InceptionV3 layers
@@ -107,16 +109,17 @@ def create_lightweight_mobilenet(layer_name, number):
     model.fit(
             train_generator,
             steps_per_epoch=step_size_train,
-            epochs=40,
+            epochs=200,
             validation_data=validation_generator,
             validation_steps=step_size_val,
         callbacks= [tensorboard])
 
     #model.fit(train_generator,steps_per_epoch=step_size_train,epochs=12)
 
-    model.save('mobilenet_model_voc_20class_ep_40_sgd_layer_'+str(len(model.layers))+'.h5')
+    model.save('mobilenet_model_voc_20class_ep_200_sgd_layer_'+str(len(model.layers))+'.h5')
 
-layer = ['12','10','8','6','4']
+#layer = ['12','10','8','6','4']
+layer = ['8', '6']
 for number in layer:
     layer_name = 'conv_dw_'+number+'_relu'
     print(layer_name)

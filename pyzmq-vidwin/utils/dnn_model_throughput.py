@@ -216,7 +216,7 @@ for model in range(0,len(model_list)):
     model_throughput_time = []
     for i in range(0,len(batch_size)):
         #print(batch_size[i])
-        th_put = load_video_into_frames('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4',batch_size[i], model_list[model])
+        th_put = load_video_into_frames('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/personcar.mp4',batch_size[i], model_list[model])
         model_throughput_time.append(th_put)
 
     total_throughput.append(model_throughput_time)
