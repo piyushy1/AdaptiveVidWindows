@@ -16,6 +16,8 @@ from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications.mobilenet import MobileNet
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
 from tensorflow.keras.applications.densenet import DenseNet121
+import os
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 from keras.applications.imagenet_utils import decode_predictions
 
 
@@ -185,7 +187,7 @@ def plotgraph(throughput_list):
     plt.xlabel('Batch Size')
     plt.ylabel('Throughput (Frames/sec)')
     plt.xticks(batch_x_ticks)
-    plt.savefig('dnn_throughput.svg', format='svg', dpi=1000,bbox_inches='tight')
+    plt.savefig('dnn_throughput_new.svg', format='svg', dpi=1000,bbox_inches='tight')
     plt.show()
 
 #load model

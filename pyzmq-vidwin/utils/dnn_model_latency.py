@@ -15,7 +15,8 @@ from keras.applications.resnet50 import ResNet50
 from keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications.mobilenet import MobileNet
 from statistics import mean
-
+import os
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 # decode predictions
 def decode_predictions(pred,k):
@@ -175,7 +176,7 @@ def plotgraph(frame_latency, batch_latency):
     CB91_Green = '#47DBCD'
     CB91_Amber = '#F5B14C'
     # Make the plot
-    plt.bar(r1, frame_latency, color=CB91_Green, width=barWidth, edgecolor='white', label='Frame By Frame Processing')
+    plt.bar(r1, frame_latency, color=CB91_Blue, width=barWidth, edgecolor='white', label='Frame By Frame Processing')
     plt.bar(r2, batch_latency, color=CB91_Amber, width=barWidth, edgecolor='white', label='Batch Processing')
     #plt.bar(r3, ObjAT, color='#2d7f5e', width=barWidth, edgecolor='white', label='Objects+Attributes+Tracking' )
 
@@ -187,7 +188,7 @@ def plotgraph(frame_latency, batch_latency):
     # Create legend & Show graphic
     plt.legend()
     #plt.grid()
-    plt.savefig('Latency6.svg', format='svg', dpi=1000,bbox_inches='tight')
+    plt.savefig('Latency_new.svg', format='svg', dpi=1000,bbox_inches='tight')
     plt.show()
 
     # batch_x_ticks =[5,10,25,50,100]
@@ -227,7 +228,7 @@ batch_latency_time =[]
 for model in range(0,len(model_list)):
     for i in range(0,len(batch_size)):
         #print(batch_size[i])
-        frame_latency, batch_latency = load_video_into_frames('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4',batch_size[i], model_list[model])
+        frame_latency, batch_latency = load_video_into_frames('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/personcar_clip.mp4',batch_size[i], model_list[model])
         frame_latency_time.append(frame_latency)
         batch_latency_time.append(batch_latency)
 

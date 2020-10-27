@@ -9,16 +9,12 @@ import cv2
 import matplotlib.pyplot as plt
 import random
 import tensorflow as tf
-
-# torch.backends.cudnn.enabled = False
-
+import time
+import os
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 # model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
 # model.cuda()
 # model.eval()
-
-# detect_fn = tf.saved_model.load(
-#    "/home/dhaval/piyush/ViIDWIN/Code/pyzmq-vidwin/faster_rcnn_resnet50_coco_2018_01_28/saved_model")
-
 
 # image = Image.open('/home/dhaval/Desktop/Car-Image.jpg')
 #
@@ -32,10 +28,11 @@ import tensorflow as tf
 #
 # print(predictions)
 
+
 def load_model(model_name):
     base_url = 'http://download.tensorflow.org/models/object_detection/'
     model_file = model_name + '.tar.gz'
-    model_dir = tf.keras.utils.get_file(
+    model_dir = tf.compat.v1.keras.utils.get_file(
         fname=model_name,
         origin=base_url + model_file,
         untar=True)
@@ -44,9 +41,11 @@ def load_model(model_name):
 
     model = tf.saved_model.load(str(model_dir))
     model = model.signatures['serving_default']
-
     return model
 
+
+detection_model = load_model('faster_rcnn_resnet50_coco_2018_01_28')
+tf.compat.v1.global_variables_initializer()
 
 COCO_INSTANCE_CATEGORY_NAMES = [
     '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
@@ -65,30 +64,14 @@ COCO_INSTANCE_CATEGORY_NAMES = [
 
 
 def get_prediction(img_batch, threshold):
-    # transform = TF.Compose([TF.ToTensor()])  # Defing PyTorch Transform
-    # frames = [transform(Image.fromarray(frame)).cuda() for frame in img_batch]
-    # predictions = model(frames)  # Pass the image to the model
-    # del frames
-    # del transform
-    # import gc
-    # for obj in gc.get_objects():
-    #     try:
-    #         if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-    #             print(type(obj), obj.size())
-    #     except Exception as e:
-    #         pass
-
-    # torch.cuda.empty_cache()
-    detection_model = load_model('faster_rcnn_resnet50_coco_2018_01_28')
-    input_tensor = tf.convert_to_tensor(img_batch[0])
-    input_tensor = input_tensor[tf.newaxis, ...]
-    detections = detection_model(input_tensor)
-    print(detections)
-
-    pred_classes = [[COCO_INSTANCE_CATEGORY_NAMES[index] for index in list(pred['labels'].cpu().data.numpy())] for pred
-                    in predictions]  # Get the Prediction Score
-    pred_boxes = [pred['boxes'].cpu().data.detach().numpy() for pred in predictions]  # Bounding boxes
-    pred_score = [list(pred['scores'].cpu().data.detach().numpy()) for pred in predictions]
+    input_tensor = [tf.convert_to_tensor(frame) for frame in img_batch]
+    # input_tensor = tf.convert_to_tensor(img_batch[0])
+    # input_tensor = input_tensor[tf.newaxis, ...]
+    predictions = detection_model(tf.stack(input_tensor))
+    pred_classes = [[COCO_INSTANCE_CATEGORY_NAMES[index] for index in list(frame_classes)] for frame_classes
+                    in list(predictions['detection_classes'].numpy().astype(np.int64))]  # Get the Prediction Score
+    pred_boxes = [pred for pred in list(predictions['detection_boxes'].numpy())]  # Bounding boxes
+    pred_score = [list(scores) for scores in list(predictions['detection_scores'].numpy())]
     pred_t = [[index for index, value in enumerate(score) if value > threshold] for score in
               pred_score]  # Get list of index with score greater than threshold.
     pred_boxes = [pred_box[pred_t[index]] for index, pred_box in enumerate(pred_boxes)]
@@ -169,7 +152,7 @@ def stream(video_path):
             # frame = Image.fromarray(frame)
             frame_batch.append(frame)
 
-            if len(frame_batch) == 18:
+            if len(frame_batch) == 15:
                 print('Batch:' + str(i) + ' width, height:', res)
                 global_batch_bbox = object_detection_api(frame_batch, threshold=0.5)
                 global_batch_bbox = scale_up_coordinates(global_batch_bbox, original_res=(width, height), batch_res=res)
