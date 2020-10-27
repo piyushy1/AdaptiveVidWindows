@@ -4,6 +4,7 @@ import os
 import zmq
 import time
 import queue
+import threading
 import argparse
 import datetime
 import pickle as pk
@@ -12,37 +13,37 @@ from multiprocessing import Process, Queue
 import numpy
 from dnnmodel import load_DNN_model
 from dnnmodel import batch_of_images
+from faster_rcnn import load_fasterrcnn_model
+from faster_rcnn import get_prediction
+from matcher import cepmatcher
 import csv
-
+import _pickle as cPickle
+import zlib
+import psutil
 # os.system('hostname -I')
 
-def block(inp_q):
+
+def dnn_input_object_detection(inp_q, out_q):
+    # load the DNN Model
+    model = load_fasterrcnn_model()
+    #model = load_DNN_model('InceptionResNet50')
     try:
         while True:
             try:
-                frame = inp_q.get(timeout=0.1)
-                # print(frame, len(frame))
-                if type(frame) == str and frame == 'END':
-                    # out_q.put('END')
-                    break
-                #print(f'New block len- {len(frame)} and time start = {frame[0][1]} and end is = {frame[-1][1]}')
-                print('New block length:', len(frame))
-                del frame
-                # if len(slide_window) == time_segment:
-                #     out_q.put(slide_window)
-                #     slide_window = slide_window[slide_time:]
-                # else:
-                #     slide_window.append(frame)
+                frame_batch = inp_q.get(timeout=0.1)
+                batch_process_time, pred = get_prediction(frame_batch, model)
+                for processed_frame in pred:
+                    out_q.put(processed_frame)
+
             except queue.Empty:
                 pass
     except Exception as e:
         print(e)
 
-
-def dnn_input(inp_q, out_q):
+def dnn_input_object_classification(inp_q, out_q):
     # load the DNN Model
-    #model = load_DNN_model('mobilenet_custom')
-    model = load_DNN_model('InceptionResNet50')
+    model = load_DNN_model('mobilenet_custom')
+    #model = load_DNN_model('InceptionResNet50')
     try:
         while True:
             try:
@@ -83,7 +84,6 @@ def get_avg_mem_usage_batch(batch):
     avgmem = sum(mem_usage) / len(mem_usage)
     return avgmem
 
-
 def get_metrics(rc, A, model):
     data = []
     if rc == 0:
@@ -105,6 +105,27 @@ def get_metrics(rc, A, model):
         batch_writer = csv.writer(batch_data, delimiter=',')
         batch_writer.writerow(data)
 
+def recreate_diff_batch(frames):
+    try:
+        reconst_batch = []
+        keyframe = None
+        i = 0
+        for frame in frames:
+            if i == 0:
+                keyframe = frame[0]
+                reconst_batch.append(frame)
+            else:
+                idx, vals = frame[0]
+                new_frame = keyframe
+                new_frame[idx[:, 0], idx[:, 1], idx[:, 2]] = vals
+                frame[0] = new_frame
+                reconst_batch.append(frame)
+            i = i + 1
+        # print('Length********', len(frames), len(diff_batch))
+        return reconst_batch
+    except Exception as e:
+        print('Exception**********************'+str(e))
+
 
 packs = []
 
@@ -116,12 +137,13 @@ def subscriber(ip="172.17.0.1", port=5551):
     #print(f"Going to bind to: {url}")
     print("Going to bind to: {url}", url)
     ctx = zmq.Context()
-    # socket = ctx.socket(zmq.SUB)
-    # socket.bind(url)  # subscriber creates ZeroMQ socket
-    # socket.setsockopt(zmq.SUBSCRIBE, ''.encode('ascii'))  # any topic
+    socket = ctx.socket(zmq.SUB)
+    socket.bind(url)  # subscriber creates ZeroMQ socket
+    socket.setsockopt(zmq.SUBSCRIBE, ''.encode('ascii'))  # any topic
 
-    socket = ctx.socket(zmq.PAIR)
-    socket.bind(url)  # connects to pub server
+    #socket = ctx.socket(zmq.PAIR)
+    #socket.bind(url)  # connects to pub server
+    #socket.connect(url)  # connects to pub server
 
     print("Sub bound to: {}\nWaiting for data...".format(url))
 
@@ -132,23 +154,29 @@ def subscriber(ip="172.17.0.1", port=5551):
     dnn_input_queue = Queue()
     sliding_window_input_queue = Queue()
     sliding_window_output_queue = Queue()
-    dnn_input_queue_process = Process(name='DNN',target=dnn_input, args=(dnn_input_queue,sliding_window_input_queue,))
+    dnn_input_queue_process = Process(name='DNN',target=dnn_input_object_classification, args=(dnn_input_queue,sliding_window_input_queue,))
     sliding_process = Process(name='Slider',target=sliding, args=(sliding_window_input_queue, sliding_window_output_queue,5,2,))
     dnn_input_queue_process.start()
     sliding_process.start()
 
     # block_process_input_queue = Queue()
-    block_process = Process(name='Blocker', target=block, args=(sliding_window_output_queue,))
-    block_process.start()
+    mathcer_process = Process(name='Blocker', target=cepmatcher, args=(sliding_window_output_queue,))
+    mathcer_process.start()
 
 
     while True:
         msg = socket.recv()
-        A = pk.loads(msg)
+        A = cPickle.loads(zlib.decompress(msg))
+        #A = pk.loads(msg)
 
         if len(A) !=0:
             #print(A)
+            # recreate the diff batch to original
+            #A = recreate_diff_batch(A)
             dnn_input_queue.put(A)
+            #print('Queuesize********', dnn_input_queue.qsize())
+            print('Recieve Count:', rc)
+            rc += 1
 
         # if len(A) !=0:
         #     get_metrics(rc, A, model)
@@ -159,12 +187,23 @@ def subscriber(ip="172.17.0.1", port=5551):
         #     sliding_window_input_queue.put(i)
 
         #print(f'Receive count = {rc}')
-        print('Recieve Count:',rc)
-        rc += 1
+        # print('Recieve Count:',rc)
+        # rc += 1
 
         # if rc%1 == 0:
         #     print('Average_Latency******', sum(latency) / len(latency) )
         #     latency.clear()
+
+
+def start_bw_stats_server():
+    import iperf3
+
+    server = iperf3.Server()
+    server.port = 6969
+    server.verbose = False
+    server.json_output = False
+    while True:
+        server.run()
 
 
 if __name__ == "__main__":
@@ -177,7 +216,13 @@ if __name__ == "__main__":
     args, leftovers = parser.parse_known_args()
     print("The following arguments are used: {}".format(args))
     print("The following arguments are ignored: {}\n".format(leftovers))
-    print('test')
 
+    # start_bw_stats_server()
+    # start bandwidth server
+    #bw_thread = threading.Thread(target=start_bw_stats_server)
+    #bw_thread.start()
+    #print("Bandwidth stats server started...")
     # call function and pass on command line arguments
     subscriber(**vars(args))
+
+
