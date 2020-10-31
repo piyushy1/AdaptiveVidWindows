@@ -22,7 +22,13 @@ from window import sliding
 from probe import get_i_frames
 from videostreamer import stream
 from videoquery import parse_query
+from microbatchfiltering import fixed_filter
+from microbatchdifferencer import create_diff_batch, fixed_differencer
+from microbatchfiltering import calculate_container_CPU_Percent, calculate_container_memory_Percent
 from multiprocessing import Process, Queue
+import _pickle as cPickle
+import zlib
+from pympler import asizeof
 import sys
 
 # os.system('hostname -I')
@@ -52,72 +58,43 @@ def get_available_memory():
 
 #################################################################################
 
-import _pickle as cPickle
-import zlib
 
+def socket_send(frame, socket,ctr):
 
-def socket_send(frame, socket):
-    # md = dict(
-    #         dtype = str(frame.dtype)
-    #         shape = frame.shape,
-    #     )
-    # socket.send_json(md)
-    #a = np.array(frame, dtype=object)
-    #print('rame size***********', a.nbytes)
     #print('MEMORY SIZE************************************************',asizeof(frame)/(1024*1024),asizeof(a)/(1024*1024),asizeof(zlib.compress(cPickle.dumps(frame)))/(1024*1024),asizeof(zlib.compress(cPickle.dumps(a)))/(1024*1024))
-    print('Data Send')
-    socket.send(pk.dumps(frame))
+    # send the difference
+    # a = get_time_milliseconds()
+    # frame = create_diff_batch(frame)
+    # print('Data Send***************************************************',ctr, (get_time_milliseconds()-a)/1000)
+    print('Data Send***************************************************', ctr)
+    #compress
+    #socket.send(pk.dumps(frame))
+    #socket.send(zlib.compress(cPickle.dumps(frame)))
+    socket.send(cPickle.dumps(frame))
+    # socket.send(frame)
+    #socket.send_string(frame, zmq.NOBLOCK)
     #socket.send(frame)
 
 def socket_send_window(q, url):
     ctx = zmq.Context()
-    socket = ctx.socket(zmq.PAIR)
+    socket = ctx.socket(zmq.PUB)
     socket.connect(url)
-
+    snd_ctr= 1
     while True:
         # print('sended..')
         try:
-            new_block = q.get(timeout=0.1)
+            new_block = q.get(timeout=None)
             if type(new_block) == str and new_block == 'END':
                 break
             #print(len(new_block))
-            socket_send(new_block, socket)
+            socket_send(new_block, socket,snd_ctr)
+
+            snd_ctr+=1
+
             # socket.send(new_block)
         except queue.Empty:
             pass
 
-import random
-
-# this function takes the resized microbatch as argument and return a differences while maintaining
-# keyframes.
-def create_diff_batch(frames):
-    try:
-        diff_batch = []
-        keyframe = None
-        i = 0
-        for frame in frames:
-            if i == 0:
-                keyframe = frame[0]
-                diff_batch.append(frame)
-            else:
-                #print('Memory of Frame********************8', asizeof(frame[0])/(1024*1024))
-                match_mask = (keyframe == frame[0])
-                idx_unmatched = np.argwhere(~match_mask).astype('uint8')
-                #print('Data TYPE***********',idx_unmatched.dtype)
-                idx_values = frame[0][tuple(zip(*idx_unmatched))]
-                #print('Memory of DIFF********************8', asizeof([idx_unmatched, idx_values])/(1024*1024))
-                frame[0] = [idx_unmatched, idx_values]
-                #frame[0] = [np.c_[idx_unmatched,idx_values].astype('int8')]
-                #frame[0] = [idx_unmatched]
-                #frame = frame[1:]d
-                diff_batch.append(frame)
-            i = i + 1
-        # print('Length********', len(frames), len(diff_batch))
-        return diff_batch
-    except Exception as e:
-        print('Exception**********************'+str(e))
-
-#from pympler.asizeof import asizeof
 
 g = None
 
@@ -139,17 +116,24 @@ def publisher(ip="0.0.0.0", port=5551):
     batch_output_queue = Queue()
     resizer_output_queue = Queue()
     filter_output_queue = Queue()
+    batch_differencer_queue = Queue()
     # start micro-batcher
-    batcher_process = Process(name='Batcher',target=batcher, args=(batch_input_queue, batch_output_queue,query_predicates,))
+    batcher_process = Process(name='Batcher',target=fixed_batcher, args=(batch_input_queue, batch_output_queue,query_predicates,))
     batcher_process.start()
     # start micro-batch resizer
-    batch_resizer_process = Process(name='Resizer',target=resizer, args=(batch_output_queue, resizer_output_queue,query_predicates,))
+    batch_resizer_process = Process(name='Resizer',target=fixed_resizer, args=(batch_output_queue, resizer_output_queue,query_predicates,))
     batch_resizer_process.start()
 
     #batch filter process
-    batch_filter_process = Process(name='LazyFilter', target=lazyfilter,
+
+    batch_filter_process = Process(name='LazyFilter', target=fixed_filter,
                                              args=(resizer_output_queue, filter_output_queue, query_predicates,))
     batch_filter_process.start()
+
+    #batch differencer and compression process
+    # batch_differencer_process = Process(name='FrameDifferencer', target=fixed_differencer,
+    #                                          args=(filter_output_queue, batch_differencer_queue,))
+    # batch_differencer_process.start()
 
     # send data to socket
     socket_send_window_process = Process(name='Socket Sender ',target=socket_send_window, args=(filter_output_queue,url,))
@@ -160,11 +144,12 @@ def publisher(ip="0.0.0.0", port=5551):
     wind = []
     import time
 
-
     ctr = 1
-    video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test2.mp4' #absolute path
-    # video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Jacksonhole2391.mp4'  # absolute path
-    #video_path = '/app/video/test2.mp4' # docker volume
+    #video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/personcar.mp4' #absolute path
+    #video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Jacksonhole2391.mp4'  # absolute path
+    video_path = '/app/video/auburn_clip3min.mp4' # docker volume
+    #video_path = '/app/video/personcar_clip.mp4'  # docker volume
+    # video_path = '/app/video/soutampton_clip.mp4'
 
     # get the list of i frames..
     iframes_list = get_i_frames(video_path)
@@ -176,17 +161,21 @@ def publisher(ip="0.0.0.0", port=5551):
         # if frame is i frame put i frame info
         if ctr in iframes_list:
             #batch_input_queue.put([frame,ctr,1,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory()])  # an iframe
-            batch_input_queue.put([frame, ctr, 1,get_time_milliseconds()])  # an iframe
+            batch_input_queue.put([frame, ctr, 1,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory_Percent()])  # an iframe
+            #print('Netowrk Data MEMORY', calculate_packet_transfered())
         else:
             #batch_input_queue.put([frame,ctr,0,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory()])
-            batch_input_queue.put([frame, ctr, 0,get_time_milliseconds()])
-
-        #calculate_container_CPU_Percent()
-        #calculate_container_memory()
-
+            batch_input_queue.put([frame, ctr, 0,get_time_milliseconds(),calculate_container_CPU_Percent(),calculate_container_memory_Percent()])
+            #print('Netowrk Data MEMORY', calculate_packet_transfered())
+        #print('Batch input queue******', batch_input_queue.qsize())
+        #print('Resizer Input queue******', batch_output_queue.qsize())
+        #print('Filter input queue******', resizer_output_queue.qsize())
+        #print('DIfferencer  queue******', filter_output_queue.qsize())
+        #print('Socket input
+        # queue******', batch_differencer_queue.qsize())
 
         ctr += 1
-        #time.sleep(0.1)
+
 
 
 if __name__ == "__main__":

@@ -1,8 +1,9 @@
 import requests
 import json
-
+import time
 
 c=1
+time.sleep(1)
 while True:
 
     containers = requests.get('http://localhost:2376/containers/json')
@@ -15,11 +16,14 @@ while True:
             data = dict()
             data['cpu_stats'] = stats['cpu_stats']
             data['precpu_stats'] = stats['precpu_stats']
+            data['memory_stats'] = stats['memory_stats']
+            # if 'networks' in stats:
+            #     data['networks'] = stats['networks']
+            #print(stats['networks'])
             #print(json.dumps(data))
             outfile.write(json.dumps(data))
+            #print('Updating File: ' + container['Id'] + '.json, ' + 'Try: ' +str(c))
+            c += 1
 
     if len(containers) == 0:
         break
-    else:
-        print('Updating File: ' + str(c))
-        c+=1

@@ -56,7 +56,7 @@ def stream(video_path):
         # socket.send_json(md)
         # socket.send(frame)
         # frame resizing the frame...
-        frame = cv2.resize(frame, (800,800))
+        frame = cv2.resize(frame, (288, 162))
         yield frame
         #print(f'Frame count = {frame_count}')
 
@@ -74,7 +74,7 @@ def stream(video_path):
         time.sleep(sleep_time)
         frame_count += 1
         # if frame_count >=50:
-        #     time.sleep(2)
+        #     time.sleep(4)
 
         # Our operations on the frame come here
         #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
