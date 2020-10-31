@@ -1,6 +1,8 @@
 # Piyush Yadav
 
 import os
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+# os.environ['TF_ENABLE_GPU_GARBAGE_COLLECTION']='false'
 import zmq
 import time
 import queue
@@ -13,8 +15,8 @@ from multiprocessing import Process, Queue
 import numpy
 from dnnmodel import load_DNN_model
 from dnnmodel import batch_of_images
-from faster_rcnn import load_fasterrcnn_model
-from faster_rcnn import get_prediction
+from faster_rcnn import load_faster_rcnn_model
+from faster_rcnn import batch_of_images_fr
 from matcher import cepmatcher
 import csv
 import _pickle as cPickle
@@ -25,15 +27,22 @@ import psutil
 
 def dnn_input_object_detection(inp_q, out_q):
     # load the DNN Model
-    model = load_fasterrcnn_model()
+    model = load_faster_rcnn_model()
+    rc =1
+    # model = None
     #model = load_DNN_model('InceptionResNet50')
     try:
         while True:
             try:
                 frame_batch = inp_q.get(timeout=0.1)
-                batch_process_time, pred = get_prediction(frame_batch, model)
+                # log evalauation metrics
+                trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(frame_batch, get_time_milliseconds())
+                batch_process_time, pred = batch_of_images_fr(frame_batch, model)
+                # log evalaution metrics
+                get_metrics(len(frame_batch), rc, frame_batch, trans_lat, batch_plus_trans_lat, batch_process_time)
                 for processed_frame in pred:
                     out_q.put(processed_frame)
+                rc+=1
 
             except queue.Empty:
                 pass
@@ -42,17 +51,21 @@ def dnn_input_object_detection(inp_q, out_q):
 
 def dnn_input_object_classification(inp_q, out_q):
     # load the DNN Model
-    model = load_DNN_model('mobilenet_custom')
+    model = load_DNN_model('ResNet101')
     #model = load_DNN_model('InceptionResNet50')
+    rc =1
     try:
         while True:
             try:
                 frame_batch = inp_q.get(timeout=0.1)
-                #print('ok')
-                #out_q.put(frame_batch)
+                # log evalauation metrics
+                trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(frame_batch, get_time_milliseconds())
                 batch_process_time, pred = batch_of_images(frame_batch, model)
+                # log evalaution metrics
+                get_metrics(len(frame_batch),rc, frame_batch,trans_lat,batch_plus_trans_lat,batch_process_time)
                 for processed_frame in pred:
                     out_q.put(processed_frame)
+                rc+=1
 
             except queue.Empty:
                 pass
@@ -62,46 +75,71 @@ def dnn_input_object_classification(inp_q, out_q):
 
 def measure_batch_transmission_latency(batch,time):
     # only transmission latency
-    trans_latency = (time-batch[-1][3]).total_seconds()*1000
-    batch_plus_transmission_latency = (time-batch[0][3]).total_seconds()*1000
+    trans_latency = time-batch[-1][3]
+    batch_plus_transmission_latency = time-batch[0][3]
     return trans_latency, batch_plus_transmission_latency
 
 
 def get_avg_edge_cpu_usage_batch(batch):
     cpu_usage = []
     for frame in batch:
-        cpu_usage.append(frame[4])
+        if isinstance(frame[4], float):
+            #print('CPU instance',frame[4])
+            cpu_usage.append(frame[4])
+    if sum(cpu_usage) >0:
+        avgcpu = sum(cpu_usage)/ len(cpu_usage)
+        return avgcpu
+    else:
+        return 0
 
-    avgcpu = sum(cpu_usage)/ len(cpu_usage)
-    return avgcpu
+def get_avg_edge_network_usage_batch(batch):
+    ntw_usage = []
+    for frame in batch:
+        ntw_usage.append(frame[6])
+
+    avgntw = sum(ntw_usage)/ len(ntw_usage)
+    return ntw_usage
 
 
 def get_avg_mem_usage_batch(batch):
     mem_usage = []
     for frame in batch:
-        mem_usage.append(frame[5])
+        if isinstance(frame[5], float):
+            mem_usage.append(frame[5])
 
-    avgmem = sum(mem_usage) / len(mem_usage)
-    return avgmem
+    if sum(mem_usage) >0:
+        avgmem = sum(mem_usage) / len(mem_usage)
+        return avgmem
+    else:
+        return 0
 
-def get_metrics(rc, A, model):
+
+def get_time_milliseconds():
+    time = (datetime.datetime.now() - datetime.datetime.utcfromtimestamp(0)).total_seconds() * 1000.0
+    return time
+
+def get_metrics(batchsize, rc, A,trans_lat,batch_plus_trans_lat,dnn_batch_latency):
     data = []
     if rc == 0:
-        throughput_time = (A[0][3]-datetime.datetime.utcfromtimestamp(0)).total_seconds() * 1000.0
-        trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(A, datetime.datetime.now())
-        dnn_batch_latency = batch_of_images(A, model)
+        throughput_time = A[0][3]
+        # trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(A, get_time_milliseconds())
+        #dnn_batch_latency, pred = batch_of_images(A, model) #object classificato
+        # dnn_batch_latency, pred = batch_of_images_fr(A,model) # object detection
+        avg_ntw= get_avg_edge_network_usage_batch(A)
         avg_cpu = get_avg_edge_cpu_usage_batch(A)
         avg_mem = get_avg_mem_usage_batch(A)
-        data.extend([rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem, throughput_time])
+        data.extend([batchsize, rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem,throughput_time,len(A)])
     else:
-        trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(A, datetime.datetime.now())
-        dnn_batch_latency = batch_of_images(A, model)
+        # trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(A, get_time_milliseconds())
+        #dnn_batch_latency, pred = batch_of_images(A, model) #object classificato
+        # dnn_batch_latency, pred = batch_of_images_fr(A, model)  # object detection
+        #avg_ntw = get_avg_edge_network_usage_batch(A)
         avg_cpu = get_avg_edge_cpu_usage_batch(A)
         avg_mem = get_avg_mem_usage_batch(A)
-        throughput_time = (datetime.datetime.now()-datetime.datetime.utcfromtimestamp(0)).total_seconds() * 1000.0
-        data.extend([rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem, throughput_time])
+        throughput_time = get_time_milliseconds()
+        data.extend([batchsize, rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem,throughput_time, len(A)])
 
-    with open('batch_data.csv', mode='a') as batch_data:
+    with open('bechmark_batch50_res(288, 162)_data__auburn3min_clip_resnet101_new.csv', mode='a') as batch_data:
         batch_writer = csv.writer(batch_data, delimiter=',')
         batch_writer.writerow(data)
 
@@ -163,10 +201,15 @@ def subscriber(ip="172.17.0.1", port=5551):
     mathcer_process = Process(name='Blocker', target=cepmatcher, args=(sliding_window_output_queue,))
     mathcer_process.start()
 
+    # load model for evalauation purpose ####COMMENT IT
+    # model = load_faster_rcnn_model()
+    #model = load_DNN_model('mobilenet_custom')
+
 
     while True:
         msg = socket.recv()
-        A = cPickle.loads(zlib.decompress(msg))
+        A =cPickle.loads(msg)
+        #A = cPickle.loads(zlib.decompress(msg))
         #A = pk.loads(msg)
 
         if len(A) !=0:
@@ -174,12 +217,17 @@ def subscriber(ip="172.17.0.1", port=5551):
             # recreate the diff batch to original
             #A = recreate_diff_batch(A)
             dnn_input_queue.put(A)
-            #print('Queuesize********', dnn_input_queue.qsize())
+            print('Queuesize********', dnn_input_queue.qsize())
             print('Recieve Count:', rc)
             rc += 1
 
         # if len(A) !=0:
-        #     get_metrics(rc, A, model)
+        #     # a = A[-1]
+        #     # get_metrics(a, rc, A[:-1], model) # first element is batch size
+        #     get_metrics(200, rc, A, model)  # first element is batch size
+        #     print('Recieve Count:', rc)
+        #     rc += 1
+
         #
         # for i in A:
         #     if i[2] == 1:

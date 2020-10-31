@@ -6,11 +6,14 @@ from datetime import datetime
 import math
 from tensorflow.keras.models import load_model
 from tensorflow.keras.applications.resnet50 import ResNet50
+from tensorflow.keras.applications.resnet import ResNet101
 from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications.mobilenet import MobileNet
 from tensorflow.keras.applications.inception_resnet_v2 import InceptionResNetV2, decode_predictions
 import psutil
 import csv
+# import os
+# os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 #from keras.applications import mobilenet
 #from tensorflow.keras.applications.imagenet_utils import decode_predictions
 
@@ -46,6 +49,11 @@ def load_DNN_model(model_name):
     if model_name == 'ResNet50':
         model_resnet = ResNet50(weights='imagenet')
         return model_resnet
+    # load resnet
+    if model_name == 'ResNet101':
+        model_resnet = load_model('resnet101_model_voc_20class_ep_50_sgd_layer_351.h5')
+        print('ESNET101 called')
+        return model_resnet
 
     # load VGG 16
     if model_name == 'VGG16':
@@ -54,7 +62,7 @@ def load_DNN_model(model_name):
 
     # load resnet
     if model_name == 'InceptionResNet50':
-        model_resnet = InceptionResNetV2(weights='/app/inception_resnet_v2_weights_tf_dim_ordering_tf_kernels.h5')
+        model_resnet = InceptionResNetV2(weights='inception_resnet_v2_weights_tf_dim_ordering_tf_kernels.h5')
         return model_resnet
 
     # load mobilenet
@@ -66,6 +74,11 @@ def load_DNN_model(model_name):
     if model_name == 'MobileNetV2':
         model_mobilenetv2 = keras.applications.mobilenet_v2.MobileNetV2()
         return model_mobilenetv2
+
+    if model_name == 'densenet121_custom':
+        # load model
+        model = load_model('densenet121_model_voc_20class_ep_100_sgd_layer_433.h5')
+        return model
 
 # batch holder: function to hold the batch size
 def batch_of_images(frame_list, model):
@@ -98,7 +111,7 @@ def batch_prediciton(batch_holder,other_metrics,model):
   dt1 = datetime.now()
   #image = preprocess_input(batch_holder)
   pred = model.predict(batch_holder)
-  eval_memory_cpu(batch_holder.shape[0])
+  #eval_memory_cpu(batch_holder.shape[0])
   predict_labels = decode_predictions_voc(pred,2)
   #print('Predicted:', decode_predictions(pred, 3)[0])
   # for predict in predict_labels:
@@ -112,6 +125,7 @@ def batch_prediciton(batch_holder,other_metrics,model):
   for i in range(0,len(predict_labels)):
       data =[]
       data.append(predict_labels[i])
+      # data.append('Dummy Data')
       data[1:] = other_metrics[i]
       processed_framedata_with_other_metric.append(data)
 

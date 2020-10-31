@@ -15,7 +15,7 @@ def cepmatcher(inp_q):
                     # out_q.put('END')
                     break
                 #print(f'New block len- {len(frame)} and time start = {frame[0][1]} and end is = {frame[-1][1]}')
-                print('New WINDOW length:', len(frame))
+                # print('New WINDOW length:', len(frame))
                 del frame
                 # if len(slide_window) == time_segment:
                 #     out_q.put(slide_window)
