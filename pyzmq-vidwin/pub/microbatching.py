@@ -59,7 +59,7 @@ def batcher(inp_q, out_q, query_predicates):
                     # print('RANGE MICROBATCHING TIME~~~~~~~~~~~~~~~~~~~~~~~~~~',new_frame[3]-slide_time[0] )
                     ##condition to know that this batch belongs to final range
                     ## so that we can know that frsh batch is from new window
-                    # frames.append({'WINDOW': new_frame[1]})
+                    frames.append({'WINDOW': new_frame[1]})
                     out_q.put(frames)
                     micro_batch_counter += 1
                     #print('RANGE MICRO-BATCH SIZE********************', len(frames))
@@ -73,7 +73,7 @@ def batcher(inp_q, out_q, query_predicates):
                     # print('SLIDE MICROBATCHING TIME??????????????????????????? ', new_frame[3] - slide_time[0])
                     ##condition to know that this batch belongs to final range
                     ## so that we can know that frsh batch is from new window
-                    # frames.append({'WINDOW': new_frame[1]})
+                    frames.append({'WINDOW': new_frame[1]})
                     out_q.put(frames)
                     micro_batch_counter += 1
                     #print('SLIDE MICRO-BATCH SIZE********************', len(frames))
@@ -116,7 +116,7 @@ def batcher(inp_q, out_q, query_predicates):
 # for EVALUATION
 def fixed_batcher(inp_q, out_q, query_predicates):
     frames = []
-    batchsize =50
+    batchsize =1
     while True:
         try:
             new_frame = inp_q.get(timeout=0.1)
