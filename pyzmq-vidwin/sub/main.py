@@ -1,10 +1,13 @@
 # Piyush Yadav
 
 import os
+from pathlib import Path
+from collections import namedtuple
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 # os.environ['TF_ENABLE_GPU_GARBAGE_COLLECTION']='false'
 import zmq
 import time
+from sub.cloudseg import run_carn, load_model
 import queue
 import threading
 import argparse
@@ -19,6 +22,7 @@ from faster_rcnn import load_faster_rcnn_model
 from faster_rcnn import batch_of_images_fr
 from matcher import cepmatcher
 import csv
+import numpy as np
 import _pickle as cPickle
 import zlib
 import psutil
@@ -34,14 +38,24 @@ def dnn_input_object_detection(inp_q, out_q):
     try:
         while True:
             try:
+                acc =[]
                 frame_batch = inp_q.get(timeout=0.1)
                 # log evalauation metrics
                 trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(frame_batch, get_time_milliseconds())
                 batch_process_time, pred = batch_of_images_fr(frame_batch, model)
-                # log evalaution metrics
-                get_metrics(len(frame_batch), rc, frame_batch, trans_lat, batch_plus_trans_lat, batch_process_time)
+                # put frame one by one in queue
                 for processed_frame in pred:
+                    #print('Data', processed_frame[0][1])
+                    indices = [i for i, x in enumerate(processed_frame[0][1]) if x == "car"]
+                    if len(indices) > 0:
+                        a = [processed_frame[0][2][index] for index in indices]
+                        acc.append(sum(a)/len(a))
                     out_q.put(processed_frame)
+                # log evalaution metrics
+                if len(acc)>0:
+                    get_metrics(len(frame_batch), rc, frame_batch, trans_lat, batch_plus_trans_lat, batch_process_time,sum(acc)/len(acc))
+                else:
+                    get_metrics(len(frame_batch), rc, frame_batch, trans_lat, batch_plus_trans_lat, batch_process_time,0)
                 rc+=1
 
             except queue.Empty:
@@ -57,14 +71,26 @@ def dnn_input_object_classification(inp_q, out_q):
     try:
         while True:
             try:
+                acc = []
                 frame_batch = inp_q.get(timeout=0.1)
                 # log evalauation metrics
                 trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(frame_batch, get_time_milliseconds())
                 batch_process_time, pred = batch_of_images(frame_batch, model)
                 # log evalaution metrics
-                get_metrics(len(frame_batch),rc, frame_batch,trans_lat,batch_plus_trans_lat,batch_process_time)
+                #get_metrics(len(frame_batch),rc, frame_batch,trans_lat,batch_plus_trans_lat,batch_process_time)
                 for processed_frame in pred:
+                    indices = [i for i, x in enumerate(processed_frame[0][1]) if x == "car"]
+                    if len(indices) > 0:
+                        a = [processed_frame[0][2][index] for index in indices]
+                        acc.append(sum(a) / len(a))
                     out_q.put(processed_frame)
+                    # log evalaution metrics
+                if len(acc) > 0:
+                    get_metrics(len(frame_batch), rc, frame_batch, trans_lat, batch_plus_trans_lat,
+                                batch_process_time, sum(acc) / len(acc))
+                else:
+                    get_metrics(len(frame_batch), rc, frame_batch, trans_lat, batch_plus_trans_lat,
+                                batch_process_time, 0)
                 rc+=1
 
             except queue.Empty:
@@ -118,7 +144,7 @@ def get_time_milliseconds():
     time = (datetime.datetime.now() - datetime.datetime.utcfromtimestamp(0)).total_seconds() * 1000.0
     return time
 
-def get_metrics(batchsize, rc, A,trans_lat,batch_plus_trans_lat,dnn_batch_latency):
+def get_metrics(batchsize, rc, A,trans_lat,batch_plus_trans_lat,dnn_batch_latency,accuracy_batch):
     data = []
     if rc == 0:
         throughput_time = A[0][3]
@@ -128,7 +154,7 @@ def get_metrics(batchsize, rc, A,trans_lat,batch_plus_trans_lat,dnn_batch_latenc
         avg_ntw= get_avg_edge_network_usage_batch(A)
         avg_cpu = get_avg_edge_cpu_usage_batch(A)
         avg_mem = get_avg_mem_usage_batch(A)
-        data.extend([batchsize, rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem,throughput_time,len(A)])
+        data.extend([batchsize, rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem,throughput_time,A[0][0].shape,accuracy_batch])
     else:
         # trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(A, get_time_milliseconds())
         #dnn_batch_latency, pred = batch_of_images(A, model) #object classificato
@@ -137,9 +163,9 @@ def get_metrics(batchsize, rc, A,trans_lat,batch_plus_trans_lat,dnn_batch_latenc
         avg_cpu = get_avg_edge_cpu_usage_batch(A)
         avg_mem = get_avg_mem_usage_batch(A)
         throughput_time = get_time_milliseconds()
-        data.extend([batchsize, rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem,throughput_time, len(A)])
+        data.extend([batchsize, rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem,throughput_time,A[0][0].shape,accuracy_batch])
 
-    with open('bechmark_batch50_res(288, 162)_data__auburn3min_clip_resnet101_new.csv', mode='a') as batch_data:
+    with open('cloudseg_batch1_thlatency_jacksonhole3min_clip_resnet101_new.csv', mode='a') as batch_data:
         batch_writer = csv.writer(batch_data, delimiter=',')
         batch_writer.writerow(data)
 
@@ -164,6 +190,26 @@ def recreate_diff_batch(frames):
     except Exception as e:
         print('Exception**********************'+str(e))
 
+
+def cloud_seg_sr(frame_batch, scale, net, device):
+    # super resolution
+    SR_dir = f'/home/dhaval/piyush/ViIDWIN/Code/pyzmq-vidwin/sub/output/frames_x{scale}'
+    Path(SR_dir).mkdir(parents=True, exist_ok=True)
+    carn_args = {
+        'model': 'carn',
+        'ckpt_path': './checkpoint/carn.pth',
+        'SR_dir': SR_dir,
+        'frame_batch': frame_batch,
+        'scale': scale,
+        'group': 1,
+        'shave': 20,
+        'cuda': True,
+        'batch_size': len(frame_batch),
+        'with_bar': False,
+        'desc': 'test',
+    }
+    carn_args = namedtuple('args', ' '.join(list(carn_args.keys())))(**carn_args)
+    return run_carn(carn_args, net, device)
 
 packs = []
 
@@ -204,8 +250,8 @@ def subscriber(ip="172.17.0.1", port=5551):
     # load model for evalauation purpose ####COMMENT IT
     # model = load_faster_rcnn_model()
     #model = load_DNN_model('mobilenet_custom')
-
-
+    # for cloud seg model
+    net, device = load_model('./checkpoint/carn.pth')
     while True:
         msg = socket.recv()
         A =cPickle.loads(msg)
@@ -216,6 +262,11 @@ def subscriber(ip="172.17.0.1", port=5551):
             #print(A)
             # recreate the diff batch to original
             #A = recreate_diff_batch(A)
+            # cloudseg model for supere resolution***************
+            frame_batch = [A[0][0]]
+            frame_batch = cloud_seg_sr(frame_batch, scale=4, net=net, device=device)
+            A[0][0] = np.transpose(frame_batch, (2,1, 0))
+            #****************************************************8
             dnn_input_queue.put(A)
             print('Queuesize********', dnn_input_queue.qsize())
             print('Recieve Count:', rc)
