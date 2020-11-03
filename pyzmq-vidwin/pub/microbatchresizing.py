@@ -176,7 +176,7 @@ def resize_micro_batch(microbatch, keyframe_resolution):
 
 def resizer(inp_q, out_q, query_predicates):
     # model = load_model('mobilenet_model_voc_20class_ep_200_sgd_layer_59.h5')
-    model = load_model('mobilenet_model_voc_20class_ep_40_sgd_layer_83.h5')
+    model = load_model('mobilenet_model_voc_20class_ep_200_sgd_layer_59.h5')
     while True:
         try:
             new_micro_batch = inp_q.get(timeout=0.01)
@@ -198,6 +198,22 @@ def fixed_resizer(inp_q, out_q, query_predicates):
     while True:
         try:
             new_micro_batch = inp_q.get(timeout=None)
+            out_q.put(new_micro_batch)
+
+        except queue.Empty:
+            pass
+
+# cloud seg downscaling
+
+def cloudseg_resizer(inp_q,out_q, query_predicates):
+    while True:
+        try:
+            new_micro_batch = inp_q.get(timeout=None)
+            frame = new_micro_batch[0][0]
+            frame = cv2.resize(frame, (960, 540),
+                       interpolation=cv2.INTER_LINEAR)
+            new_micro_batch.append([frame,0])
+            #print('NEW MICROBATCH******', new_micro_batch)
             out_q.put(new_micro_batch)
 
         except queue.Empty:
