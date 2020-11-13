@@ -24,6 +24,12 @@ You will need the following to be installed before running the system:
 ```
 docker-compose -f docker-compose-cpu.yml build
 ```
+The CPU and memory can be set from the dockercompose file.
+```
+    mem_limit: 2000m
+    mem_reservation: 1000m
+    cpuset: 0-4
+```
 
 
 ### Contact
