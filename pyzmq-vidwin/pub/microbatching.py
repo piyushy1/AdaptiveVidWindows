@@ -1,6 +1,7 @@
 import random
 import queue
 import cv2
+import csv
 
 
 # function to get distance between histograms of two frames.
@@ -39,6 +40,10 @@ def get_frame_distance(frame1, frame2):
 MAX_BATCH_SIZE = 70
 INTERFRAME_SIMILARITY_SCORE = 0.98
 
+def log_eager(data):
+    with open('/app/video/eagerfilter.csv', mode='a') as batch_data:
+        batch_writer = csv.writer(batch_data, delimiter=',')
+        batch_writer.writerow(data)
 
 def batcher(inp_q, out_q, query_predicates):
     range_counter = 0
@@ -46,6 +51,7 @@ def batcher(inp_q, out_q, query_predicates):
     frames = []
     micro_batch_counter = 1
     prev_max_batch = 1
+    early_drop_filter =0
     while True:
         try:
             # new_frame = inp_q.get(timeout = 0.1)
@@ -87,7 +93,9 @@ def batcher(inp_q, out_q, query_predicates):
                     # perform early filtering and drop the batch
                     ############################################
                     if (micro_batch_counter - prev_max_batch) == 1:
-                        #print('EARLY Drop Frames*****************************')
+                        early_drop_filter+= len(frames)
+                        log_eager([early_drop_filter])
+                        print('EARLY Drop Frames**********************************',early_drop_filter)
                         frames = []
                         prev_max_batch = micro_batch_counter
                         micro_batch_counter += 1
@@ -102,10 +110,11 @@ def batcher(inp_q, out_q, query_predicates):
                 else:
                     if new_frame[2] == 1 or get_frame_distance(frames[0][0],
                                                                new_frame[0]) < INTERFRAME_SIMILARITY_SCORE:
+                        #print('PUT DATA in RESIZER*****************')
                         out_q.put(frames)
                         micro_batch_counter += 1
                         # out_q.put(diff_batch)
-                        print('MICRO-BATCH SIZE********************', len(frames))
+                        #print('MICRO-BATCH SIZE********************', len(frames))
                         frames = []
             frames.append(new_frame)
             # print('frame lengt************', len(frames))

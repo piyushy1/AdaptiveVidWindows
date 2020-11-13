@@ -56,8 +56,11 @@ def stream(video_path):
         # socket.send_json(md)
         # socket.send(frame)
         # frame resizing the frame...
-        #frame = cv2.resize(frame, (500,500))
-        frame = cv2.resize(frame, (480, 270),interpolation=cv2.INTER_LINEAR)
+        #frame = cv2.resize(frame, (224,224))frame[300:, 145:]
+        #frame = frame[270:, 320:] # for auburn toomers corner
+        #frame = frame[300:, 145:] # for sandylane post processing
+        #frame = cv2.resize(frame, (480, 270),interpolation=cv2.INTER_LINEAR) # cloudseg 4x
+        #frame = cv2.resize(frame, (240, 135), interpolation=cv2.INTER_LINEAR) #cloudseg 8x
         yield frame
         #print(f'Frame count = {frame_count}')
 

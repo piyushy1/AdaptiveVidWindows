@@ -176,18 +176,19 @@ def resize_micro_batch(microbatch, keyframe_resolution):
 
 def resizer(inp_q, out_q, query_predicates):
     # model = load_model('mobilenet_model_voc_20class_ep_200_sgd_layer_59.h5')
-    model = load_model('mobilenet_model_voc_20class_ep_200_sgd_layer_59.h5')
+    model = load_model('mobilenet_model_voc_20class_ep_40_sgd_layer_83.h5')
     while True:
         try:
             new_micro_batch = inp_q.get(timeout=0.01)
             objectlist, resolution = keyframe_resizer(new_micro_batch[0][0], model, query_predicates,
                                                       CANDIDATE_RESOLUTION_SET)
-            print('The RESOLUTION IS *********************************', resolution, objectlist)
+            # print('The RESOLUTION IS *********************************', resolution, objectlist)
             # resize full microbatch
             resized_microbatch = resize_micro_batch(new_micro_batch, resolution)
             # add in last the top-k values presnet in the microbatch
             resized_microbatch.append(objectlist)
             out_q.put(resized_microbatch)
+
 
         except queue.Empty:
             pass
@@ -198,7 +199,10 @@ def fixed_resizer(inp_q, out_q, query_predicates):
     while True:
         try:
             new_micro_batch = inp_q.get(timeout=None)
-            out_q.put(new_micro_batch)
+            if isinstance(new_micro_batch[-1], dict):
+                out_q.put(new_micro_batch[:-1])
+            else:
+                out_q.put(new_micro_batch)
 
         except queue.Empty:
             pass

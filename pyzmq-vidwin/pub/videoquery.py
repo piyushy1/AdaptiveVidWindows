@@ -1,7 +1,8 @@
 import re
 
 # simplified VEQL query strucutre below accuracy 2 means top-2
-query1 = 'CONJ(car,person) WITHINWINDOW(8,4) ACCURACY=2'
+# query1 = 'CONJ(car,person) WITHINWINDOW(300,200) ACCURACY=2'
+query1 = 'CONJ(car) WITHINWINDOW(6,5) ACCURACY=2'
 
 # a rigid and simplified query parser
 def parse_query():

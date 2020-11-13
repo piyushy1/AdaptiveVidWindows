@@ -16,9 +16,9 @@ services:
       - /home/dhaval/piyush/ViIDWIN/Code/pyzmq-vidwin/stats:/docker_stats/
     environment:
       - TZ=Europe/Dublin
-    mem_limit: 5000m
+    mem_limit: 2000m
     mem_reservation: 1000m
-    cpuset: 0-10
+    cpuset: 0-4
 #    networks:
 #      sub_net2:
 #        ipv4_address: 10.5.0.6
