@@ -1,9 +1,5 @@
-# AdaptiveWindows
+# VID-WIN AdaptiveWindows
 
-Pub-Docker and Sub python process
+This is repo page for paper 'VID-WIN: Query Aware Data-Driven Windowing in Complex Event Processing for Fast Video Inference in Edge Cloud Paradigm'
 
-Run the command from inside the directory which you want to mount 
-
-docker run -it -v "$(pwd)":/data1 publisher
-
-change video path to /data1/video_mname.mp4
+# Steps to run the process
