@@ -6,13 +6,13 @@ MAINTAINER Piyush
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
-  gcc iproute wondershaper python3-pip
+  gcc iproute wondershaper python3-pip iperf3
 
 RUN pip install -U pip==${PIP_VERSION_TO_INSTALL}
 
 WORKDIR /app
 COPY requirements.txt /app
-
+COPY inception_resnet_v2_weights_tf_dim_ordering_tf_kernels.h5 /app
 RUN pip install -r requirements.txt -i https://pypi.org/simple
 
 ADD . /app

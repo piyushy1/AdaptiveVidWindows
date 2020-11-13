@@ -47,6 +47,7 @@ def sliding(inp_q, out_q, time_segment, slide_time):
             if (frame[3] - curr_edge_window_time) > query_predicates['RANGE'] * 1000 or (
                     get_time_milliseconds() - curr_cloud_window_time) >= ((query_predicates['RANGE'] * 1000) + delay):
                 slide_time_end_idx = get_slide_time_window(slide_window,delay)
+                #print('WINDOW Lenght*****', len(slide_window))
                 out_q.put(slide_window)
                 slide_window = slide_window[slide_time_end_idx:]
                 # curr_time = slide_window[0][3]
@@ -64,6 +65,7 @@ def sliding(inp_q, out_q, time_segment, slide_time):
             if (get_time_milliseconds() - curr_cloud_window_time) >= ((query_predicates['RANGE'] * 1000) + delay):
                 if len(slide_window)>0:
                     slide_time_end_idx = get_slide_time_window(slide_window, delay)
+                    #print('WINDOW Lenght*****', len(slide_window))
                     out_q.put(slide_window)
                     slide_window = slide_window[slide_time_end_idx:]
                     # curr_time = slide_window[0][3]

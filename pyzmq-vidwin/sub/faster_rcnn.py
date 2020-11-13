@@ -73,12 +73,13 @@ def batch_of_images_fr(frame_list, model):
     other_metrics = []
     i=0
     for frame in frame_list:
-        batch_holder.append(frame[0]) # [0]because each frame is attached with time and other metrics
-        other_metrics.append(frame[1:])
-        i +=1
+        if type(frame) == list:
+            batch_holder.append(frame[0]) # [0]because each frame is attached with time and other metrics
+            other_metrics.append(frame[1:])
+            i +=1
 
     #frame_time = frame_by_frame_prediction(batch_holder,model)
-    batch_time, pred =  get_prediction(batch_holder, other_metrics,model, threshold =0.4)
+    batch_time, pred =  get_prediction(batch_holder, other_metrics,model, threshold =0.2)
     return batch_time, pred
     #return frame_time,batch_time
 
@@ -102,11 +103,14 @@ def get_prediction(img_batch, other_metrics, detection_model, threshold):
                             in list(predictions['detection_classes'].numpy().astype(np.int64))]  # Get the Prediction Score
             pred_boxes = [pred for pred in list(predictions['detection_boxes'].numpy())]  # Bounding boxes
             pred_score = [list(scores) for scores in list(predictions['detection_scores'].numpy())]
-            pred_t = [[index for index, value in enumerate(score) if value > threshold] for score in
+            pred_thresholds = [[index for index, value in enumerate(score) if value > threshold] for score in
                       pred_score]  # Get list of index with score greater than threshold.
-            pred_boxes = [pred_box[pred_t[index]] for index, pred_box in enumerate(pred_boxes)]
-            pred_class = [itemgetter(*pred_t[index])(pred_class) for index, pred_class in enumerate(pred_classes)]
-            pred_scores = [itemgetter(*pred_t[index])(pred_score) for index, pred_score in enumerate(pred_score)]
+
+            print('length*****',len(pred_classes))
+            pred_boxes = [pred_box[pred_thresholds[index]] for index, pred_box in enumerate(pred_boxes) if len(pred_thresholds[index])>0]
+            pred_class = [itemgetter(*pred_thresholds[index])(pred_class) for index, pred_class in enumerate(pred_classes) if len(pred_thresholds[index])>0]
+            pred_scores = [itemgetter(*pred_thresholds[index])(pred_score) for index, pred_score in enumerate(pred_score) if len(pred_thresholds[index])>0]
+
             pred_boxes_full.append(pred_boxes)
             pred_class_full.append(pred_class)
             pred_scores_full.append(pred_scores)
@@ -118,12 +122,14 @@ def get_prediction(img_batch, other_metrics, detection_model, threshold):
         pred_classes = [[COCO_INSTANCE_CATEGORY_NAMES[index] for index in list(frame_classes)] for frame_classes
                         in list(predictions['detection_classes'].numpy().astype(np.int64))]  # Get the Prediction Score
         pred_boxes = [pred for pred in list(predictions['detection_boxes'].numpy())]  # Bounding boxes
-        pred_score = [list(scores) for scores in list(predictions['detection_scores'].numpy())]
-        pred_t = [[index for index, value in enumerate(score) if value > threshold] for score in
-                  pred_score]  # Get list of index with score greater than threshold.
-        pred_boxes = [pred_box[pred_t[index]] for index, pred_box in enumerate(pred_boxes)]
-        pred_class = [itemgetter(*pred_t[index])(pred_class) for index, pred_class in enumerate(pred_classes)]
-        pred_scores = [itemgetter(*pred_t[index])(pred_score) for index, pred_score in enumerate(pred_score)]
+        pred_scores = [list(scores) for scores in list(predictions['detection_scores'].numpy())]
+        pred_thresholds = [[index for index, value in enumerate(score) if value > threshold] for score in
+                  pred_scores]  # Get list of index with score greater than threshold.
+
+        #print('length*****',len(pred_classes))
+        pred_boxes = [pred_box[pred_thresholds[index]] for index, pred_box in enumerate(pred_boxes) if len(pred_thresholds[index])>0]
+        pred_class = [itemgetter(*pred_thresholds[index])(pred_class) for index, pred_class in enumerate(pred_classes) if len(pred_thresholds[index])>0]
+        pred_scores = [itemgetter(*pred_thresholds[index])(pred_score) for index, pred_score in enumerate(pred_scores) if len(pred_thresholds[index])>0]
         pred_boxes_full.append(pred_boxes)
         pred_class_full.append(pred_class)
         pred_scores_full.append(pred_scores)

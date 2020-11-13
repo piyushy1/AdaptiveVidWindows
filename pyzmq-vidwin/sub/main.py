@@ -7,7 +7,7 @@ os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 # os.environ['TF_ENABLE_GPU_GARBAGE_COLLECTION']='false'
 import zmq
 import time
-from sub.cloudseg import run_carn, load_model
+from cloudseg import run_carn, load_model
 import queue
 import threading
 import argparse
@@ -29,6 +29,9 @@ import psutil
 # os.system('hostname -I')
 
 
+def dnn_input_object_detection_dummy(a,b):
+    pass
+
 def dnn_input_object_detection(inp_q, out_q):
     # load the DNN Model
     model = load_faster_rcnn_model()
@@ -42,7 +45,9 @@ def dnn_input_object_detection(inp_q, out_q):
                 frame_batch = inp_q.get(timeout=0.1)
                 # log evalauation metrics
                 trans_lat, batch_plus_trans_lat = measure_batch_transmission_latency(frame_batch, get_time_milliseconds())
+                #print('BATCH LENGTH********', len(frame_batch))
                 batch_process_time, pred = batch_of_images_fr(frame_batch, model)
+                #print('BATCH PROCESSED**************',rc)
                 # put frame one by one in queue
                 for processed_frame in pred:
                     #print('Data', processed_frame[0][1])
@@ -65,7 +70,8 @@ def dnn_input_object_detection(inp_q, out_q):
 
 def dnn_input_object_classification(inp_q, out_q):
     # load the DNN Model
-    model = load_DNN_model('ResNet101')
+    #model = load_DNN_model('ResNet101')
+    model = load_DNN_model('ResNet50')
     #model = load_DNN_model('InceptionResNet50')
     rc =1
     try:
@@ -78,19 +84,21 @@ def dnn_input_object_classification(inp_q, out_q):
                 batch_process_time, pred = batch_of_images(frame_batch, model)
                 # log evalaution metrics
                 #get_metrics(len(frame_batch),rc, frame_batch,trans_lat,batch_plus_trans_lat,batch_process_time)
+
                 for processed_frame in pred:
-                    indices = [i for i, x in enumerate(processed_frame[0][1]) if x == "car"]
-                    if len(indices) > 0:
-                        a = [processed_frame[0][2][index] for index in indices]
-                        acc.append(sum(a) / len(a))
+                    # indices = [i for i, x in enumerate(processed_frame[0][1]) if x == "car"]
+                    # if len(indices) > 0:
+                    #     a = [processed_frame[0][2][index] for index in indices]
+                    #     acc.append(sum(a) / len(a))
                     out_q.put(processed_frame)
-                    # log evalaution metrics
+                # log evalaution metrics
                 if len(acc) > 0:
                     get_metrics(len(frame_batch), rc, frame_batch, trans_lat, batch_plus_trans_lat,
                                 batch_process_time, sum(acc) / len(acc))
                 else:
                     get_metrics(len(frame_batch), rc, frame_batch, trans_lat, batch_plus_trans_lat,
                                 batch_process_time, 0)
+                print('Batch Logged ')
                 rc+=1
 
             except queue.Empty:
@@ -98,6 +106,25 @@ def dnn_input_object_classification(inp_q, out_q):
     except Exception as e:
         print(e)
 
+
+def log_accuracy(batchsize,rc,pred):
+    acc= []
+    for processed_frame in pred:
+        indices = [i for i, x in enumerate(processed_frame[0][1]) if x == "car"]
+        if len(indices) > 0:
+            a = [processed_frame[0][2][index] for index in indices]
+            acc.append(sum(a) / len(a))
+    # log evalaution metrics
+    if len(acc) > 0:
+        log_data([batchsize, rc, sum(acc) / len(acc)])
+    else:
+        log_data([batchsize, rc, 0])
+
+
+def log_data(data):
+    with open('wincloud_postprocessing_plus_vidwin_sandylane_fatserrcnn.csv', mode='a') as batch_data:
+        batch_writer = csv.writer(batch_data, delimiter=',')
+        batch_writer.writerow(data)
 
 def measure_batch_transmission_latency(batch,time):
     # only transmission latency
@@ -165,7 +192,7 @@ def get_metrics(batchsize, rc, A,trans_lat,batch_plus_trans_lat,dnn_batch_latenc
         throughput_time = get_time_milliseconds()
         data.extend([batchsize, rc, trans_lat, batch_plus_trans_lat, dnn_batch_latency, avg_cpu, avg_mem,throughput_time,A[0][0].shape,accuracy_batch])
 
-    with open('cloudseg_batch1_thlatency_jacksonhole3min_clip_resnet101_new.csv', mode='a') as batch_data:
+    with open('esper_accuracy3sec_clip_resnet50.csv', mode='a') as batch_data:
         batch_writer = csv.writer(batch_data, delimiter=',')
         batch_writer.writerow(data)
 
@@ -238,7 +265,7 @@ def subscriber(ip="172.17.0.1", port=5551):
     dnn_input_queue = Queue()
     sliding_window_input_queue = Queue()
     sliding_window_output_queue = Queue()
-    dnn_input_queue_process = Process(name='DNN',target=dnn_input_object_classification, args=(dnn_input_queue,sliding_window_input_queue,))
+    dnn_input_queue_process = Process(name='DNN',target=dnn_input_object_detection_dummy, args=(dnn_input_queue,sliding_window_input_queue,))
     sliding_process = Process(name='Slider',target=sliding, args=(sliding_window_input_queue, sliding_window_output_queue,5,2,))
     dnn_input_queue_process.start()
     sliding_process.start()
@@ -246,29 +273,36 @@ def subscriber(ip="172.17.0.1", port=5551):
     # block_process_input_queue = Queue()
     mathcer_process = Process(name='Blocker', target=cepmatcher, args=(sliding_window_output_queue,))
     mathcer_process.start()
-
+    ##########################################
     # load model for evalauation purpose ####COMMENT IT
-    # model = load_faster_rcnn_model()
+    #model = load_faster_rcnn_model()
     #model = load_DNN_model('mobilenet_custom')
     # for cloud seg model
-    net, device = load_model('./checkpoint/carn.pth')
+    # net, device = load_model('./checkpoint/carn.pth')
+    ############################################
     while True:
         msg = socket.recv()
-        A =cPickle.loads(msg)
-        #A = cPickle.loads(zlib.decompress(msg))
+        #A =cPickle.loads(msg)
+        A = cPickle.loads(zlib.decompress(msg))
         #A = pk.loads(msg)
 
         if len(A) !=0:
-            #print(A)
-            # recreate the diff batch to original
+            del A
+            ##### recreate the diff batch to original#######
             #A = recreate_diff_batch(A)
+            ###############################################
             # cloudseg model for supere resolution***************
-            frame_batch = [A[0][0]]
-            frame_batch = cloud_seg_sr(frame_batch, scale=4, net=net, device=device)
-            A[0][0] = np.transpose(frame_batch, (2,1, 0))
-            #****************************************************8
-            dnn_input_queue.put(A)
-            print('Queuesize********', dnn_input_queue.qsize())
+            # frame_batch = [A[0][0]]
+            # frame_batch = cloud_seg_sr(frame_batch, scale=4, net=net, device=device)
+            # A[0][0] = np.transpose(frame_batch, (2,1, 0))
+            # print('Cloudseg', rc)
+            ################################################
+            # batch_process_time, pred = batch_of_images_fr(A, model)
+            # log_accuracy(len(A),rc,pred)
+            # print('Accuracy Logged', rc)
+            #####################################################
+            #dnn_input_queue.put(A)
+            #print('Queuesize********', dnn_input_queue.qsize())
             print('Recieve Count:', rc)
             rc += 1
 
