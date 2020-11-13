@@ -19,4 +19,13 @@ You will need the following to be installed before running the system:
 
 # Steps to run the process
 1. There are two folder sub and pub. Pub emulates the edge device.
-2. To run pub run the 
+2. To run pub run the docker-compose-cpu.yml
+
+```
+docker-compose -f docker-compose-cpu.yml build
+```
+
+
+### Contact
+In case of any queries or issue please connect with me at piyush.yadav@insight-centre.org
+
