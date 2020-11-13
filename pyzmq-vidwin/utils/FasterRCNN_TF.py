@@ -9,6 +9,7 @@ import cv2
 import matplotlib.pyplot as plt
 import random
 import tensorflow as tf
+from datetime import datetime
 import os
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
@@ -132,8 +133,8 @@ def stream(video_path):
     print('Original width, height:', width, height)
 
     # (height, width)
-    resolutions = [(100, 100), (250, 250), (500, 500)]
-
+    #resolutions = [(100, 100), (250, 250), (500, 500)]
+    resolutions = [(500, 500)]
     # read the fps so that opencv read with same fps speed
     fps = cap.get(cv2.CAP_PROP_FPS)
     print(f"FPS for video: {video_path} : {fps}")
@@ -143,6 +144,7 @@ def stream(video_path):
     frame_batch = []
     res = random.choice(resolutions)
     global_video_bbox = [99999, 99999, 0, 0]
+    time1 = datetime.now()
     while True:
         # Capture frame-by-frame
 
@@ -157,8 +159,9 @@ def stream(video_path):
             # frame = Image.fromarray(frame)
             frame_batch.append(frame)
 
-            if len(frame_batch) == 50:
-                print('Batch:' + str(i) + ' width, height:', res)
+            if len(frame_batch) == 40:
+                #print('Batch:' + str(i) + ' width, height:', res)
+                time = datetime.now()
                 global_batch_bbox = object_detection_api(frame_batch, threshold=0.5, res=res)
                 global_batch_bbox = scale_up_coordinates(global_batch_bbox, original_res=(height, width), batch_res=res)
                 update_global_bounding_box(global_video_bbox, global_batch_bbox)
@@ -169,7 +172,7 @@ def stream(video_path):
         if not ret:
             break
     cap.release()
-
+    print('Total Time', (datetime.now()-time1).total_seconds())
     pt1, pt2 = (global_video_bbox[1], global_video_bbox[0]), (
         global_video_bbox[3], global_video_bbox[2])
     cv2.rectangle(original_image, pt1, pt2, color=(0, 255, 0), thickness=3)

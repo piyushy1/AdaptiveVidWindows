@@ -2,11 +2,11 @@ from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 import random
 
 def clip_video(start, end, number):
-    ffmpeg_extract_subclip("/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/personcar.mp4",
-                       start, end, targetname = "/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/personcar_clip.mp4")
+    ffmpeg_extract_subclip("/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/southampton_traffic_cam_20feb.mp4",
+                       start, end, targetname = "/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/southampton_traffic_cam_20feb_30sec.mp4")
 
 
-clip_video(23,35,1)
+#clip_video(1,30,1)
 
 
 # random_time = random.sample(range(10, 20000), 118)
@@ -25,14 +25,17 @@ clip_video(23,35,1)
 
 # import cv2
 #
-# cap = cv2.VideoCapture('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test3.mp4')
+# cap = cv2.VideoCapture('/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Cropped Datasets for Processing/sandylane_clip3min.mp4')
 # i =0
 # while True:
 #     ret, frame = cap.read()
 #     if i ==1:
 #         break
-#     frame = cv2.resize(frame, (900, 900))
+#     #frame = cv2.resize(frame, (900, 900))
+#     frame = frame[300:, 145:]
+#     #cv2.imshow("cropped", frame)
 #     cv2.imwrite('resol900.jpg', frame)
+#     #cv2.waitKey(0)
 #     i = i+1
 
 
@@ -102,22 +105,30 @@ def get_colorlist():
 
 def micro_batch_utility(window_length):
     entropylist =[]
-    batchlist = [1000]
+    mb_utility =[]
+    batchlist = [40]
     for batch in batchlist:
         batch_entropy =[]
+        batch_entropy1=[]
         for i in range(0, len(window_length), batch):
             win = window_length[i:i+batch]
             win_position = 1-(i/len(window_length))
             batch_size = 1- (len(win)/ len(window_length[i:]))
-            batch_entropy.append(entropy([win_position, batch_size], base=2))
+            ent1 = entropy([win_position, batch_size], base=2)
+            ent2 = entropy([0.5, ent1], base=2)
+            batch_entropy.append(ent1)
+            batch_entropy1.append(ent2)
             entropylist.append(batch_entropy)
-            #print('Window_Position: ', win_position, 'Batch_Size: ',batch_size, 'Entropy: ', entropy([win_position, batch_size], base=2))
+            mb_utility.append(batch_entropy1)
+            print('Window_Position: ', win_position, 'Batch_Size: ',batch_size, 'Entropy1: ',ent2,'Entropy: ', entropy([win_position, batch_size], base=2))
 
     #t_y = np.array(batchlist)
     a = get_colorlist()
     b = get_marker_list()
-    for i in range(0,2):
-        plt.plot(entropylist[0], color = a[i], linestyle = '-', marker = b[i], markersize = 7)
+    plt.plot(entropylist[0], color=a[0], linestyle='--', marker=b[0], markersize=7)
+    plt.plot(mb_utility[0], color=a[1], linestyle='--', marker=b[0], markersize=7)
+    # for i in range(0,2):
+    #     plt.plot(entropylist[0], color = a[i], linestyle = '-', marker = b[i], markersize = 7)
     #plt.plot(entropylist[1], 'b+--')
     #plt.plot(entropylist[2])
     #plt.plot(entropylist[3])
@@ -131,7 +142,7 @@ win = []
 for i in range(0,10000):
     win.append('ok')
 
-#micro_batch_utility(win)
+micro_batch_utility(win)
 
 #print(entropy([1/2,1/1000], base=2))
 

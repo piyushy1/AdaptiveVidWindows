@@ -18,6 +18,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from datetime import datetime
 from sys import getsizeof
+import os
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 # method to print the divisors
 def get_resolution_set(aspect_width, aspect_height, resolution):
@@ -89,6 +91,7 @@ def process_image(resolution_list, image_directory, image_files, model):
             pred = model.predict(img)
 
 def calculate_top_k_accuracy(acc_value):
+    framecount = 501
     top1 =[]
     top2= []
     top3 = []
@@ -167,14 +170,19 @@ def plot_top_k_accuracy(final_resolution):
             top_3.append(c)
             top_4.append(d)
             top_5.append(e)
-
+    colorlist = get_colorlist()
+    marker_list = get_marker_list()
+    accuracylist = [top_1,top_2,top_3,top_4,top_5]
     fig = plt.figure()
     #t_y = np.array([1,5,10,20,30,40,50,60,70,80,90,100])
     t_y = np.array(batch_x_ticks_res)
-    plt.plot(t_y, top_1, 'r^--',t_y, top_2, 'mD-',t_y, top_3, '#92D050',t_y, top_4, 'bo--',t_y, top_4, 'b^--')
+    for i in range(0,len(accuracylist)):
+        plt.plot(t_y, accuracylist[i],color = colorlist[i], linestyle = '-', marker = marker_list[i], markersize = 7)
+
+    #plt.plot(t_y, top_1, 'r^--',t_y, top_2, 'mD-',t_y, top_3, '#92D050',t_y, top_4, 'bo--',t_y, top_4, 'b^--')
     plt.legend(['top-1','top-2', 'top-3' , 'top-4', 'top-5'], loc='lower right',prop={'size':10},labelspacing=0.2)
     plt.xlabel('Resolution')
-    plt.ylabel('Average Accuracy (%)')
+    plt.ylabel('Average TOP-K Accuracy (%)')
     plt.xticks(batch_x_ticks_res)
     #plt.savefig('avgaccuracy_asp.svg', format='svg', dpi=1000,bbox_inches='tight')
     plt.show()
@@ -195,8 +203,8 @@ def plot_throughput(throughput_list):
     plt.xlabel('Resolution')
     plt.ylabel('Throughput (fps)')
     plt.xticks(resolution_x_ticks)
-    #plt.savefig('throughput_asp.svg', format='svg', dpi=1000,bbox_inches='tight')
-    plt.show()
+    plt.savefig('throughput_asp.svg', format='svg', dpi=1000,bbox_inches='tight')
+    #plt.show()
 
 def get_colorlist():
     CB91_Blue = '#2CBDFE'
@@ -225,36 +233,45 @@ def plot_latency(latency_list):
     #data1 = [np.random.normal(0, std, size=100) for std in x_pos]
     # print(data)
     # fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(10, 6))
-    plt.violinplot(latency, x_pos, points=20, widths=0.3,
-                   showmeans=True, color=get_colorlist()[0], showextrema=True, showmedians=True)
+    parts = plt.violinplot(latency, x_pos, points=20, widths=0.3,
+                   showmeans=True, showextrema=True, showmedians=True)
+    for pc in parts['bodies']:
+        pc.set_facecolor('#2CBDFE')
+        #pc.set_edgecolor('black')
+        pc.set_alpha(1)
     plt.title('Latency', fontsize=10)
     plt.xlabel('Resolution')
     plt.ylabel('Latency Distribution (ms) ')
     plt.xticks(x_pos,resolution_x_ticks)
-    #plt.savefig('latency_asp.svg', format='svg', dpi=1000, bbox_inches='tight')
-    plt.show()
+    plt.savefig('latency_asp.svg', format='svg', dpi=1000, bbox_inches='tight')
+    #plt.show()
 
 
 def plot_memory_consumption(memory_list):
     resolution_x_ticks = []
-    latency = []
+    memory = []
     for data in memory_list:
         for key, value in data.items():
             resolution_x_ticks.append(str(key))
-            latency.append(value)
-
+            memory.append(value)
+    # mb = (1024 * 1024)
+    # memory[:] = [x / mb for x in memory]
     x_pos = [i for i in range(1, len(resolution_x_ticks) + 1)]
+    memory_mean = [np.mean(data)/(1024 * 1024) for data in memory]
+    memory_std = [np.std(data)/(1024 * 1024) for data in memory]
     # data1 = [np.random.normal(0, std, size=100) for std in x_pos]
     # print(data)
     # fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(10, 6))
-    plt.violinplot(latency, x_pos, points=20, widths=0.3,
-                   showmeans=True, showextrema=True, showmedians=True)
+    plt.bar(x_pos, memory_mean, yerr=memory_std, align='center', color=get_colorlist()[0], alpha=1, ecolor='black',
+           capsize=10)
+    # plt.violinplot(latency, x_pos, points=20, widths=0.3,
+    #                showmeans=True, showextrema=True, showmedians=True)
     plt.title('Memory', fontsize=10)
     plt.xlabel('Resolution')
-    plt.ylabel('Memory Bytes')
+    plt.ylabel('Memory (MB)')
     plt.xticks(x_pos, resolution_x_ticks)
-    #plt.savefig('memorycons_asp.svg', format='svg', dpi=1000, bbox_inches='tight')
-    plt.show()
+    plt.savefig('memorycons_asp.svg', format='svg', dpi=1000, bbox_inches='tight')
+    #plt.show()
 
 
 def process_video(resolution_list, video_path, model):
@@ -268,6 +285,8 @@ def process_video(resolution_list, video_path, model):
         all_memory = []
         print('RESOLUTION ****', resolution)
         cap = cv2.VideoCapture(video_path)
+        frame_count_num = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        print('Frame Count Number******* ', frame_count_num)
         # get frame dimension
         width = cap.get(3)  # float
         height = cap.get(4)  # float
@@ -293,7 +312,7 @@ def process_video(resolution_list, video_path, model):
             time_diff = (dt4-dt3).total_seconds()*1000
             all_latency.append(time_diff)
             predictions = decode_predictions(pred,5)
-            print(predictions)
+            #print(predictions)
             dict_predict = {i: predictions}
             all_predictions.append(dict_predict)
             #print(pred)
@@ -307,7 +326,7 @@ def process_video(resolution_list, video_path, model):
 
 
 # set the video path
-video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/videoplaybackclip.mp4'
+video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/personcar_clip.mp4'
 #video_path = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/test3.mp4'
 
 # image directory path
@@ -316,12 +335,12 @@ image_directory = '/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/voc_validation/ca
 image_files = read_image_directory(image_directory)
 # the get the list of the resolution
 #resolution_list= get_resolution_set(320,180, (1920,1080))
-resolution_list1= get_resolution_set(200,200, (400,400))
+resolution_list1= get_resolution_set(600,600, (1200,1200))
 #load model
 from memory_profiler import profile
 from tensorflow.keras.applications import ResNet50
 
-model = load_model('mobilenet_model_voc_20class_ep_40_sgd_layer_83.h5')
+model = load_model('mobilenet_model_voc_20class_ep_50_sgd.h5')
 
 # @profile
 # def load_model_m():

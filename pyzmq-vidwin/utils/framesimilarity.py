@@ -173,7 +173,7 @@ def Histogram_frame_distance(frame1, frame2):
     time2 = datetime.datetime.now()
     delta = time2 - time1
     execution_time = int(delta.total_seconds() * 1000)
-    print('Histogram_Distance: ', dist_value , execution_time)
+    #print('Histogram_Distance: ', dist_value , execution_time)
     return dist_value, execution_time
 
 ###################################################################################
@@ -210,7 +210,7 @@ def stream_video(video, algo, dist_threshold):
     video = cv2.VideoCapture(video)
     total = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     # video.set(cv2.CAP_PROP_FPS, int(5))
-    print("Frame rate : {0}".format(video.get(cv2.CAP_PROP_FPS)))
+    print("Frame rate : {0}".format(video.get(cv2.CAP_PROP_FPS)), total)
 
     # temporary block to hold first frame
     temp_block = []
@@ -220,7 +220,7 @@ def stream_video(video, algo, dist_threshold):
     while True:
 
         # there is some video release error so breaking loop before final frmae.
-        if i == 1000:
+        if i == 1320:
             # get the latency for all similarity algo.
             final_latency.append(np.array(latency_list))
             batch_count_list.append(np.array(batch_list))
@@ -290,8 +290,13 @@ def violin_plot(data, label):
         #pc.set_edgecolor('black')
         pc.set_alpha(1)
     #plt.title('Latency', fontsize=10)
+    for partname in ('cbars', 'cmins', 'cmaxes', 'cmeans', 'cmedians'):
+        vp = parts[partname]
+        vp.set_edgecolor('#661D98')
+        vp.set_linewidth(1.9)
+
     plt.xticks(x_pos,label)
-    plt.savefig('framesimilarity_distance.svg', format='svg', dpi=1000, bbox_inches='tight')
+    plt.savefig('endmotionvideo_distance.svg', format='svg', dpi=1000, bbox_inches='tight')
     plt.show()
 
 
@@ -299,28 +304,30 @@ def boxplot():
     print('write code of box plot')
 
 if __name__ == "__main__":
-    video_path = "/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/testhost/test2.mp4"
+    video_path = "/home/dhaval/piyush/ViIDWIN/Datasets_VIDWIN/Motion Datatset/endmotion.mp4"
 
     #video_path = "/home/dhaval/piyush/Usecases_dataset/fall_detection/Lecture room/Videos/video (1).avi"
     #algolist = [average_hash_distance, difference_hash_distance, perceptual_hash_distance, wavelet_hash_distance, Histogram_frame_distance]
     #algolist = [average_hash_distance, difference_hash_distance, perceptual_hash_distance, wavelet_hash_distance]
 
     distance_threshold =  [0.99, 0.98, 0.95,0.93, 0.90,0.85,0.80]
-    algolist = [average_hash_distance, wavelet_hash_distance, difference_hash_distance, perceptual_hash_distance, Histogram_frame_distance]
+    algolist = [average_hash_distance, difference_hash_distance, perceptual_hash_distance, wavelet_hash_distance,
+                Histogram_frame_distance]
+    #algolist = [average_hash_distance, wavelet_hash_distance, difference_hash_distance, perceptual_hash_distance, Histogram_frame_distance]
     # for comparing different similarity algo
 
-    for algo in algolist:
-        stream_video(video_path, algo,0.99)
+    # for algo in algolist:
+    #     stream_video(video_path, algo,0.99)
 
-    # for distance in distance_threshold:
-    #     stream_video(video_path, Histogram_frame_distance, distance)
+    for distance in distance_threshold:
+        stream_video(video_path, Histogram_frame_distance, distance)
 
     # print('Len of time list*******', len(final_latency))
 
     #print('Len of distance list*******', distance_list)
-    violin_plot(final_latency, ['AH','WH','DH','PH', 'HH'])
+    #violin_plot(final_latency, ['AH','DH','PH','WH', 'HH'])
     #violin_plot(final_latency, ['HH'])
-    #violin_plot(batch_count_list, ['0.99','0.98', '0.95','0.93', '0.90','0.85','0.80'])
+    violin_plot(batch_count_list, ['0.99','0.98', '0.95','0.93', '0.90','0.85','0.80'])
 
 
     #average_hash_distance('/home/dhaval/piyush/NEW Evaluation/images/image+1.png', '/home/dhaval/piyush/NEW Evaluation/images/image+100.png')
