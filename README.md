@@ -17,7 +17,7 @@ You will need the following to be installed before running the system:
 1. GPU (tested on Nvidia RTX 2080 Ti with 10 GB RAM)
 2. Atleast 64 GB RAM
 
-# Important File Information
+### Important File Information
 
 #### Edge Node
 
@@ -40,7 +40,7 @@ You will need the following to be installed before running the system:
 [sub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/sub/main.py) : main cloud node file which recives the micro batches via socket.
 
 
-# Steps to run the process
+### Steps to run the process
 1. There are two folder sub and pub. Pub emulates the edge device.
 2. To run pub run the docker-compose-cpu.yml
 
