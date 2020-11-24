@@ -19,7 +19,7 @@ You will need the following to be installed before running the system:
 
 # Important File Information
 
-## Edge Publisher
+### Edge Publisher
 
 [pub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/main.py) : the main file to start the edge-based publisher with zeromq socket and multiprocessing based VID-WIN controller.
 
