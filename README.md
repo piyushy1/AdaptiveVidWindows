@@ -18,9 +18,19 @@ You will need the following to be installed before running the system:
 2. Atleast 64 GB RAM
 
 # Important File Information
-[pub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/main.py) : the main file to start the edge-based publisher.
+[pub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/main.py) : the main file to start the edge-based publisher with zeromq socket and multiprocessing based VID-WIN controller.
 
 [pub/microbatching.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/microbatching.py) : the file related to create micro-batches, fixed batches and eager filtering.
+
+[pub/microbatchresizing.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/microbatchresizing.py) : the file related to resize the micro-batches and fixed resolution micro-batches.
+
+[pub/microbatchfiltering.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/microbatchfiltering.py) : the file related to filter resized micro-batches as per edge CPU, memory and Query cache.
+
+[pub/microbatchdifferencer.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/microbatchdifferencer.py) : the file related to create micro-batch .difference values and compression 
+
+[pub/videoquery.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/videoquery.py) : the file related to create sample VEQL query with simple parsing.
+
+[pub/videostreamer.py](github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/videostreamer.py) : emulter video streams based on docker volume.
 
 # Steps to run the process
 1. There are two folder sub and pub. Pub emulates the edge device.
