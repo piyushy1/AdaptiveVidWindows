@@ -19,7 +19,7 @@ You will need the following to be installed before running the system:
 
 # Important File Information
 
-### Edge Publisher
+#### Edge Node
 
 [pub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/main.py) : the main file to start the edge-based publisher with zeromq socket and multiprocessing based VID-WIN controller.
 
@@ -33,7 +33,12 @@ You will need the following to be installed before running the system:
 
 [pub/videoquery.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/videoquery.py) : the file related to create sample VEQL query with simple parsing.
 
-[pub/videostreamer.py](github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/videostreamer.py) : emulter video streams based on docker volume.
+[pub/videostreamer.py](github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/videostreamer.py) : emulate video streams based on docker volume.
+
+#### Cloud Node
+
+[sub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/sub/main.py) : main cloud node file which recives the micro batches via socket.
+
 
 # Steps to run the process
 1. There are two folder sub and pub. Pub emulates the edge device.
