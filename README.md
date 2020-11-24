@@ -18,9 +18,9 @@ You will need the following to be installed before running the system:
 2. Atleast 64 GB RAM
 
 # Important File Information
-[pub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/main.py)
+[pub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/main.py) : the main file to start the edge-based publisher.
 
-[pub/microbatching.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/microbatching.py)
+[pub/microbatching.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/microbatching.py) : the file related to create micro-batches, fixed batches and eager filtering.
 
 # Steps to run the process
 1. There are two folder sub and pub. Pub emulates the edge device.
