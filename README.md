@@ -2,7 +2,6 @@
 
 This is repo page for paper 'VID-WIN: Query Aware Data-Driven Windowing in Complex Event Processing for Fast Video Inference in Edge Cloud Paradigm'. The work is part of larger [GNOSIS Multimedia Event Processing](http://gnosis-mep.org/#overview) project.
 
-![Gnosis Image](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/Gnosis.PNG)
 
 
 ### Requirements
@@ -38,10 +37,16 @@ You will need the following to be installed before running the system:
 
 [pub/videostreamer.py](github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/videostreamer.py) : emulate video streams based on docker volume.
 
-#### Cloud Node <TO DO>
+#### Cloud Node
 
-[sub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/sub/main.py) : main cloud node file which recives the micro batches via socket.
+[sub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/sub/main.py) : main cloud node file which recieves the micro batches via socket.
+[sub/CloudSeg](https://github.com/piyushy1/AdaptiveVidWindows/tree/master/pyzmq-vidwin/sub/cloudseg) : CloudSeg Model. Code credits to [Reducto Paper] (https://github.com/reducto-sigcomm-2020/reducto)
+[sub/window.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/sub/window.py) : cloud window ... <Update Bugs....left>
+[sub/matcher.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/sub/main.py) : Vidcep sample matcher file.. for more code refer to [VIDCEP](https://github.com/piyushy1/VidCEP)
 
+### Ultility Folder
+
+different files to test function level codes for specific task.
 
 ### Steps to run the process <To DO>
 1. There are two folder sub and pub. Pub emulates the edge device.
@@ -56,7 +61,7 @@ The CPU and memory can be set from the dockercompose file.
     mem_reservation: 1000m
     cpuset: 0-4
 ```
-
+3. Similalry run the sub folder. The container can be composed from inside and outside folder. Replace the ip as per system and docker ips whereever required.
 
 ### Contact
 In case of any queries or issue please connect with me at piyush.yadav@insight-centre.org
