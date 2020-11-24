@@ -38,12 +38,12 @@ You will need the following to be installed before running the system:
 
 [pub/videostreamer.py](github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/pub/videostreamer.py) : emulate video streams based on docker volume.
 
-#### Cloud Node
+#### Cloud Node <TO DO>
 
 [sub/main.py](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/pyzmq-vidwin/sub/main.py) : main cloud node file which recives the micro batches via socket.
 
 
-### Steps to run the process
+### Steps to run the process <To DO>
 1. There are two folder sub and pub. Pub emulates the edge device.
 2. To run pub run the docker-compose-cpu.yml
 
