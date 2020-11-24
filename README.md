@@ -2,6 +2,7 @@
 
 This is repo page for paper 'VID-WIN: Query Aware Data-Driven Windowing in Complex Event Processing for Fast Video Inference in Edge Cloud Paradigm'. The work is part of larger [GNOSIS Multimedia Event](http://gnosis-mep.org/#overview) Processing project.
 
+![Gnosis Image](https://github.com/piyushy1/AdaptiveVidWindows/blob/master/Gnosis.PNG)
 
 
 ### Requirements
