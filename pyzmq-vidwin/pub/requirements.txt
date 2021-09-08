@@ -4,5 +4,5 @@ Pympler
 opencv-contrib-python-headless
 ffmpeg
 docker
-pillow==5.4.1
+pillow==8.3.2
 tensorflow==2.1.0
